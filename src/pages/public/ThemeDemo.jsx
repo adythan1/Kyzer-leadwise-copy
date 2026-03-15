@@ -36,7 +36,7 @@ export default function ThemeDemo() {
             Theme System Demo
           </h1>
           <p className="text-xl text-text-light mb-8">
-            Explore the different themes available in Kyzer LMS
+            Explore the different themes available in Leadwise Academy
           </p>
           
           {/* Theme Controls */}

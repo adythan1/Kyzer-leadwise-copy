@@ -123,7 +123,7 @@ export default function VerifyEmail() {
             </h3>
             <ol className="text-sm text-text-light space-y-1 list-decimal list-inside">
               <li>Check your email inbox</li>
-              <li>Look for an email from Kyzer LMS</li>
+              <li>Look for an email from Leadwise Academy</li>
               <li>Click the verification link</li>
               <li>You'll be automatically signed in</li>
             </ol>

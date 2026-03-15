@@ -12,7 +12,7 @@ export default function AuthLayout({ children }) {
           <Link to="/" className="flex items-center space-x-3">
             <img src={leadwiseLogo} alt="Leadwise" className="h-10" />
             <div>
-              <h1 className="text-2xl font-bold text-text-dark">Kyzer Solutions</h1>
+              <h1 className="text-2xl font-bold text-text-dark">Leadwise Academy</h1>
               <p className="text-sm text-text-muted">Learning Management System</p>
             </div>
           </Link>

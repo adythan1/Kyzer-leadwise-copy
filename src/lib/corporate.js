@@ -354,14 +354,14 @@ export const corporateUtils = {
     const inviteUrl = `${window.location.origin}/accept-invitation?token=${invitation.token}`
     
     return {
-      subject: `You're invited to join ${company.name} on Kyzer LMS`,
+      subject: `You're invited to join ${company.name} on Leadwise Academy`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #374151;">You're invited to join ${company.name}</h2>
           
           <p>Hi there!</p>
           
-          <p><strong>${invitedBy.email}</strong> has invited you to join <strong>${company.name}</strong>'s learning platform on Kyzer LMS.</p>
+          <p><strong>${invitedBy.email}</strong> has invited you to join <strong>${company.name}</strong>'s learning platform on Leadwise Academy.</p>
           
           <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin: 0 0 10px 0; color: #374151;">Company: ${company.name}</h3>
@@ -392,7 +392,7 @@ export const corporateUtils = {
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           
           <p style="color: #9ca3af; font-size: 12px; text-align: center;">
-            This invitation was sent by ${company.name} via Kyzer LMS.
+            This invitation was sent by ${company.name} via Leadwise Academy.
             If you weren't expecting this invitation, you can safely ignore this email.
           </p>
         </div>
@@ -400,7 +400,7 @@ export const corporateUtils = {
       text: `
         You're invited to join ${company.name}
         
-        ${invitedBy.email} has invited you to join ${company.name}'s learning platform on Kyzer LMS.
+        ${invitedBy.email} has invited you to join ${company.name}'s learning platform on Leadwise Academy.
         
         Company: ${company.name}
         Role: ${invitation.role}

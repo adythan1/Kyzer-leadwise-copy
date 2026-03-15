@@ -61,15 +61,15 @@ export default function Contact() {
       icon: Mail,
       title: "Email Us",
       description: "Send us an email and we'll respond within 24 hours",
-      contact: "hello@kyzer.com",
-      action: "mailto:hello@kyzer.com"
+      contact: "info@kyzersolutions.com",
+      action: "mailto:info@kyzersolutions.com"
     },
     {
       icon: Phone,
       title: "Call Us",
       description: "Speak directly with our team during business hours",
-      contact: "+1 (555) 123-4567",
-      action: "tel:+15551234567"
+      contact: "+1 617 5600 821",
+      action: "tel:+16175600821"
     },
     {
       icon: MessageCircle,
@@ -82,25 +82,11 @@ export default function Contact() {
 
   const officeLocations = [
     {
-      city: "San Francisco",
-      address: "123 Innovation Drive, Suite 400",
-      zipcode: "San Francisco, CA 94105",
-      phone: "+1 (555) 123-4567",
+      city: "Waltham",
+      address: "56 Russell St",
+      zipcode: "Waltham, MA 02453",
+      phone: "+1 617 5600 821",
       isPrimary: true
-    },
-    {
-      city: "New York",
-      address: "456 Business Avenue, Floor 15",
-      zipcode: "New York, NY 10001", 
-      phone: "+1 (555) 987-6543",
-      isPrimary: false
-    },
-    {
-      city: "London",
-      address: "789 Tech Street, Level 8",
-      zipcode: "London, UK EC1A 1BB",
-      phone: "+44 20 1234 5678",
-      isPrimary: false
     }
   ]
 
@@ -150,7 +136,7 @@ export default function Contact() {
             Get in Touch
           </h1>
           <p className="text-xl text-gray-200 mb-8">
-            Have questions about Kyzer LMS? We're here to help you succeed with your learning initiatives.
+            Have questions about Leadwise Academy? We're here to help you succeed with your learning initiatives.
           </p>
         </div>
       </section>
@@ -323,9 +309,9 @@ export default function Contact() {
 
             {/* Office Locations */}
             <div>
-              <h2 className="text-2xl font-bold text-text-dark mb-6">Our Offices</h2>
+              <h2 className="text-2xl font-bold text-text-dark mb-6">Our Office</h2>
               <p className="text-text-light mb-8">
-                Visit us at one of our global locations or reach out to our regional teams.
+                Visit us at our office or reach out to our team.
               </p>
 
               <div className="space-y-6">

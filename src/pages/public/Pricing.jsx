@@ -412,7 +412,7 @@ export default function Pricing() {
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold mb-6">Ready to Get Started?</h2>
           <p className="text-xl text-gray-200 mb-8">
-            Join thousands of learners and organizations who trust Kyzer LMS for their development needs.
+            Join thousands of learners and organizations who trust Leadwise Academy for their development needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">

@@ -63,7 +63,7 @@ export default function Home() {
       company: "TechCorp Inc.",
       avatar: "👩‍💼",
       content:
-        "Kyzer LMS transformed our training program. Employee engagement increased by 300% and we can finally track real learning outcomes.",
+        "Leadwise Academy transformed our training program. Employee engagement increased by 300% and we can finally track real learning outcomes.",
       rating: 5,
     },
     {
@@ -304,7 +304,7 @@ export default function Home() {
             </h2>
             <p className="text-xl text-text-light max-w-2xl mx-auto">
               See why thousands of professionals and hundreds of organizations
-              choose Kyzer LMS
+              choose Leadwise Academy
             </p>
           </div>
 
@@ -386,7 +386,7 @@ export default function Home() {
           </h2>
           <p className="text-xl text-gray-200 mb-8">
             Join thousands of professionals and organizations who are already
-            growing with Kyzer LMS
+            growing with Leadwise Academy
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">

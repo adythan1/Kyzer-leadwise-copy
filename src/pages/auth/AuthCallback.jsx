@@ -88,7 +88,7 @@ export default function AuthCallback() {
           if (profile.account_type === 'corporate') {
             toast.success('Corporate account created! Your organization has been set up.');
           } else {
-            toast.success('Welcome to Kyzer LMS!');
+            toast.success('Welcome to Leadwise Academy!');
           }
           
           setStatus('success');

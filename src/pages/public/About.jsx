@@ -90,7 +90,7 @@ export default function About() {
               <h2 className="text-2xl font-bold text-text-dark mb-6">Our Story</h2>
               <div className="space-y-4 text-text-medium">
                 <p>
-                  Founded in 2023, Kyzer LMS emerged from a simple observation: traditional 
+                  Founded in 2023, Leadwise Academy emerged from a simple observation: traditional 
                   learning management systems were failing to meet the needs of modern, 
                   fast-paced organizations and their learners.
                 </p>
@@ -229,7 +229,7 @@ export default function About() {
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl font-bold mb-6 text-white">Ready to Transform Your Learning?</h2>
           <p className="text-xl text-white/90 mb-8">
-            Join thousands of organizations that trust Kyzer LMS for their learning and development needs.
+            Join thousands of organizations that trust Leadwise Academy for their learning and development needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">

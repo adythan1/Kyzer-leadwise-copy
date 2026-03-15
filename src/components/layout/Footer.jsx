@@ -25,7 +25,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-primary-default rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold">K</span>
               </div>
-              <span className="text-xl font-bold">Kyzer LMS</span>
+              <span className="text-xl font-bold">Leadwise Academy</span>
             </div>
             <p className="text-text-light max-w-sm">
               Empowering organizations with modern learning management solutions. 
@@ -176,7 +176,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             {/* Copyright */}
             <div className="flex items-center space-x-4 text-sm text-text-light">
-              <span>© {currentYear} Kyzer Solutions. All rights reserved.</span>
+              <span>© {currentYear} Leadwise Academy. All rights reserved.</span>
               <span className="hidden md:inline">•</span>
               <span className="flex items-center gap-1">
                 Made with <Heart className="w-4 h-4 text-red-500" fill="currentColor" /> for learners
