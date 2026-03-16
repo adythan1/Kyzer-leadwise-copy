@@ -24,7 +24,8 @@ import {
   Search,
   Filter,
   Edit3,
-  Paperclip
+  Paperclip,
+  Gift
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -58,11 +59,14 @@ export default function CourseManagement() {
   const fetchQuizzes = useCourseStore(state => state.actions.fetchQuizzes);
   const deleteQuiz = useCourseStore(state => state.actions.deleteQuiz);
 
+  const updateCourse = useCourseStore(state => state.actions.updateCourse);
+
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showLessonForm, setShowLessonForm] = useState(false);
   const [showModuleForm, setShowModuleForm] = useState(false);
   const [showQuizForm, setShowQuizForm] = useState(false);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+  const [showFreeTrialManager, setShowFreeTrialManager] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [editingLesson, setEditingLesson] = useState(null);
   const [editingModule, setEditingModule] = useState(null);
@@ -513,25 +517,123 @@ export default function CourseManagement() {
           </div>
         </Card>
         
-        <Card className="p-4">
+        <Card
+          className="p-4 cursor-pointer hover:ring-2 hover:ring-emerald-300 transition-all"
+          onClick={() => setShowFreeTrialManager(!showFreeTrialManager)}
+        >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Recently Added</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {courses?.filter(c => {
-                  const createdDate = new Date(c.created_at);
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return createdDate > weekAgo;
-                }).length || 0}
+              <p className="text-sm text-gray-600">Free Trial Package</p>
+              <p className="text-2xl font-bold text-emerald-600">
+                {courses?.filter(c => c.is_free_trial).length || 0}
+                <span className="text-sm font-normal text-gray-400"> / 5</span>
               </p>
             </div>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <Star className="w-4 h-4 text-blue-500" />
+            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+              <Gift className="w-4 h-4 text-emerald-500" />
             </div>
           </div>
         </Card>
       </div>
+
+      {/* Free Trial Package Manager */}
+      {showFreeTrialManager && (
+        <Card className="p-6 border-2 border-emerald-200 bg-emerald-50/50">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Gift className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Free Trial Package</h3>
+                <p className="text-sm text-gray-600">
+                  Select up to 5 short courses for free trial users. These courses will not include assessments or certificates.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowFreeTrialManager(false)}
+              className="text-gray-400 hover:text-gray-600 text-sm"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="mb-4 flex items-center gap-2">
+            <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  (courses?.filter(c => c.is_free_trial).length || 0) >= 5
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(((courses?.filter(c => c.is_free_trial).length || 0) / 5) * 100, 100)}%` }}
+              />
+            </div>
+            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              {courses?.filter(c => c.is_free_trial).length || 0} / 5 courses
+            </span>
+          </div>
+
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {courses?.filter(c => c.is_published).map(course => {
+              const isInFreeTrial = course.is_free_trial;
+              const limitReached = (courses?.filter(c => c.is_free_trial).length || 0) >= 5;
+
+              return (
+                <div
+                  key={course.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                    isInFreeTrial
+                      ? 'bg-emerald-100 border-emerald-300'
+                      : 'bg-white border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={isInFreeTrial}
+                      disabled={!isInFreeTrial && limitReached}
+                      onChange={async () => {
+                        try {
+                          await updateCourse(course.id, { is_free_trial: !isInFreeTrial });
+                          await fetchCourses(user?.id);
+                          if (!isInFreeTrial) {
+                            success(`"${course.title}" added to free trial package`);
+                          } else {
+                            success(`"${course.title}" removed from free trial package`);
+                          }
+                        } catch (err) {
+                          showError('Failed to update free trial status');
+                        }
+                      }}
+                      className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                    />
+                    <div className="truncate">
+                      <p className="text-sm font-medium text-gray-900 truncate">{course.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {course.duration_minutes ? `${course.duration_minutes} min` : 'No duration set'}
+                        {course.difficulty_level ? ` · ${course.difficulty_level}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  {isInFreeTrial && (
+                    <span className="text-xs bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                      Free Trial
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {(!courses || courses.filter(c => c.is_published).length === 0) && (
+            <p className="text-sm text-gray-500 text-center py-4">
+              No published courses available. Publish courses first to add them to the free trial package.
+            </p>
+          )}
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card className="p-4">
@@ -556,6 +658,7 @@ export default function CourseManagement() {
               <option value="all">All Courses</option>
               <option value="published">Published</option>
               <option value="draft">Draft</option>
+              <option value="free_trial">Free Trial</option>
             </select>
           </div>
         </div>
@@ -671,7 +774,8 @@ export default function CourseManagement() {
               // Status filter
               const matchesFilter = filterStatus === 'all' || 
                                    (filterStatus === 'published' && course.is_published) ||
-                                   (filterStatus === 'draft' && !course.is_published);
+                                   (filterStatus === 'draft' && !course.is_published) ||
+                                   (filterStatus === 'free_trial' && course.is_free_trial);
               
               return matchesSearch && matchesFilter;
             })
@@ -693,6 +797,11 @@ export default function CourseManagement() {
                     {course.is_published && (
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                         Published
+                      </span>
+                    )}
+                    {course.is_free_trial && (
+                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                        Free Trial
                       </span>
                     )}
                   </div>

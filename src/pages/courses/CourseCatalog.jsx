@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCourseStore } from "@/store/courseStore";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { useSubscription } from "@/hooks/courses/useSubscription";
 import { 
   Search, 
   Filter, 
@@ -15,7 +16,9 @@ import {
   Play, 
   Settings,
   TrendingUp,
-  Award
+  Award,
+  Lock,
+  ArrowRight
 } from "lucide-react";
 import { 
   Button, 
@@ -26,10 +29,12 @@ import {
   EmptyState
 } from "@/components/ui";
 import Tooltip from "@/components/ui/Tooltip";
+import { LockedCourseOverlay, LockedCourseBadge, FreeTrialBadge } from "@/components/course/UpgradePrompt";
 
 const CourseCatalog = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isFreeTrial, canAccessCourse } = useSubscription();
   
     // Store selectors - memoized to prevent infinite loops
   const courses = useCourseStore(state => state.courses);
@@ -141,6 +146,12 @@ const CourseCatalog = () => {
       return;
     }
 
+    const course = courses.find(c => c.id === courseId);
+    if (course && !canAccessCourse(course)) {
+      navigate('/pricing');
+      return;
+    }
+
     // If already enrolled and can continue learning, navigate to course
     if (isEnrolled(courseId) && canContinueLearning(courseId)) {
       navigate(`/app/courses/${courseId}`);
@@ -155,7 +166,6 @@ const CourseCatalog = () => {
 
     try {
       await enrollInCourse(user.id, courseId);
-      // Navigate to the course after successful enrollment
       navigate(`/app/courses/${courseId}`);
     } catch (error) {
       // Handle error silently or set error state if needed
@@ -202,7 +212,10 @@ const CourseCatalog = () => {
   };
 
   // Course card component
-  const CourseCard = ({ course }) => (
+  const CourseCard = ({ course }) => {
+    const isLocked = isFreeTrial && !canAccessCourse(course);
+
+    return (
     <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col h-full">
       {/* Course Image */}
       <div className="relative h-48 overflow-hidden flex-shrink-0">
@@ -218,30 +231,33 @@ const CourseCatalog = () => {
           </div>
         )}
         
+        {isLocked && <LockedCourseOverlay />}
+
         {/* Status Badges */}
-        {course.is_published && (
-          <div className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-            Published
-          </div>
-        )}
+        <div className="absolute top-3 left-3 flex items-center gap-1.5 z-20">
+          {course.is_free_trial && <FreeTrialBadge />}
+          {isLocked && <LockedCourseBadge />}
+        </div>
         
         {isEnrolled(course.id) && (
-          <div className="absolute top-3 right-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+          <div className="absolute top-3 right-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium z-20">
             Enrolled
           </div>
         )}
 
         {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-          <Button
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            size="sm"
-            onClick={() => navigate(`/app/courses/${course.id}`)}
-          >
-            <Play className="w-4 h-4 mr-2" />
-            View Course
-          </Button>
-        </div>
+        {!isLocked && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+            <Button
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              size="sm"
+              onClick={() => navigate(`/app/courses/${course.id}`)}
+            >
+              <Play className="w-4 h-4 mr-2" />
+              View Course
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Course Content */}
@@ -317,41 +333,61 @@ const CourseCatalog = () => {
           </div>
 
           {/* Action Button */}
-          <Button
-            className="w-full"
-            variant={isEnrolled(course.id) ? "secondary" : "default"}
-            onClick={() => handleEnroll(course.id)}
-          >
-            {isEnrolled(course.id) ? (
-              canContinueLearning(course.id) ? (
-                <>
-                  <Award className="w-4 h-4 mr-2" />
-                  Continue Learning
-                </>
+          {isLocked ? (
+            <div className="space-y-2">
+              <Button
+                className="w-full"
+                variant="secondary"
+                onClick={() => navigate('/pricing')}
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Sign Up for Paid Plan
+              </Button>
+              <p className="text-xs text-center text-gray-500">
+                Paid package required to access this course
+              </p>
+            </div>
+          ) : (
+            <Button
+              className="w-full"
+              variant={isEnrolled(course.id) ? "secondary" : "default"}
+              onClick={() => handleEnroll(course.id)}
+            >
+              {isEnrolled(course.id) ? (
+                canContinueLearning(course.id) ? (
+                  <>
+                    <Award className="w-4 h-4 mr-2" />
+                    Continue Learning
+                  </>
+                ) : (
+                  <>
+                    <Award className="w-4 h-4 mr-2" />
+                    Course Completed
+                  </>
+                )
               ) : (
                 <>
-                  <Award className="w-4 h-4 mr-2" />
-                  Course Completed
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Enroll Now
                 </>
-              )
-            ) : (
-              <>
-                <BookOpen className="w-4 h-4 mr-2" />
-                Enroll Now
-              </>
-            )}
-          </Button>
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </Card>
-  );
+    );
+  };
 
   // Course list item component
-  const CourseListItem = ({ course }) => (
+  const CourseListItem = ({ course }) => {
+    const isLocked = isFreeTrial && !canAccessCourse(course);
+
+    return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex gap-6">
         {/* Course Image */}
-        <div className="w-48 h-32 rounded-lg overflow-hidden flex-shrink-0">
+        <div className="relative w-48 h-32 rounded-lg overflow-hidden flex-shrink-0">
           {course.thumbnail_url ? (
             <img
               src={course.thumbnail_url}
@@ -363,6 +399,7 @@ const CourseCatalog = () => {
               <BookOpen className="w-12 h-12 text-indigo-400" />
             </div>
           )}
+          {isLocked && <LockedCourseOverlay />}
         </div>
 
         {/* Course Details */}
@@ -371,6 +408,8 @@ const CourseCatalog = () => {
             <div>
               {/* Badges */}
               <div className="flex items-center gap-2 mb-2">
+                {course.is_free_trial && <FreeTrialBadge />}
+                {isLocked && <LockedCourseBadge />}
                 {course.category && (
                   <span 
                     className="text-xs px-2 py-1 rounded-full font-medium"
@@ -385,11 +424,6 @@ const CourseCatalog = () => {
                 {course.difficulty_level && (
                   <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                     {course.difficulty_level}
-                  </span>
-                )}
-                {course.is_published && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                    Published
                   </span>
                 )}
               </div>
@@ -437,34 +471,45 @@ const CourseCatalog = () => {
               />
             </div>
 
-            <Button
-              variant={isEnrolled(course.id) ? "secondary" : "default"}
-              onClick={() => handleEnroll(course.id)}
-            >
-              {isEnrolled(course.id) ? (
-                canContinueLearning(course.id) ? (
-                  <>
-                    <Award className="w-4 h-4 mr-2" />
-                    Continue Learning
-                  </>
+            {isLocked ? (
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/pricing')}
+              >
+                <Lock className="w-4 h-4 mr-2" />
+                Sign Up for Paid Plan
+              </Button>
+            ) : (
+              <Button
+                variant={isEnrolled(course.id) ? "secondary" : "default"}
+                onClick={() => handleEnroll(course.id)}
+              >
+                {isEnrolled(course.id) ? (
+                  canContinueLearning(course.id) ? (
+                    <>
+                      <Award className="w-4 h-4 mr-2" />
+                      Continue Learning
+                    </>
+                  ) : (
+                    <>
+                      <Award className="w-4 h-4 mr-2" />
+                      Course Completed
+                    </>
+                  )
                 ) : (
                   <>
-                    <Award className="w-4 h-4 mr-2" />
-                    Course Completed
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Enroll Now
                   </>
-                )
-              ) : (
-                <>
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Enroll Now
-                </>
-              )}
-            </Button>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
     </Card>
-  );
+    );
+  };
 
   // Loading state
   if (loading.courses) {
@@ -534,6 +579,32 @@ const CourseCatalog = () => {
           )}
         </div>
       </div>
+
+      {/* Free Trial Banner */}
+      {isFreeTrial && user && (
+        <Card className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <Lock className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  You&apos;re on the Free Trial
+                </p>
+                <p className="text-xs text-gray-600">
+                  Some courses are visible but require a paid package to access. Sign up for a paid plan to unlock 
+                  the full catalog, quizzes, and certificates.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" onClick={() => navigate('/pricing')} className="flex-shrink-0">
+              View Paid Plans
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card className="p-6">

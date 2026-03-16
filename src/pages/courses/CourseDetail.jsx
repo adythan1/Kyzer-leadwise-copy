@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useCourseStore } from '@/store/courseStore'
 import { useAuth } from '@/hooks/auth/useAuth'
+import { useSubscription } from '@/hooks/courses/useSubscription'
 import {
   Play,
   Clock,
@@ -21,13 +22,17 @@ import {
   Layers,
   Edit3,
   ExternalLink,
-  File
+  File,
+  Lock,
+  Crown,
+  ArrowRight
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ShareCourseModal from '@/components/course/ShareCourseModal'
 import { useToast } from '@/components/ui'
+import { UpgradeBanner, FreeTrialBadge } from '@/components/course/UpgradePrompt'
 
 // Normalize URL to ensure it has a protocol (for existing data that might not have it)
 const normalizeUrl = (url) => {
@@ -56,6 +61,7 @@ export default function CourseDetail() {
   const { courseId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { isFreeTrial, canAccessCourse, canAccessCertificates } = useSubscription()
   // Store selectors - individual to prevent infinite loops
   const courses = useCourseStore(state => state.courses);
   const enrolledCourses = useCourseStore(state => state.enrolledCourses);
@@ -235,6 +241,8 @@ export default function CourseDetail() {
     enrollment.course_id === courseId || enrollment.id === courseId
   )
 
+  const isLocked = isFreeTrial && !canAccessCourse(course)
+
   // Fetch lessons when component mounts
   useEffect(() => {
     loadCourseLessons()
@@ -304,9 +312,13 @@ export default function CourseDetail() {
       return
     }
 
+    if (isLocked) {
+      navigate('/pricing')
+      return
+    }
+
     try {
       await enrollInCourse(user.id, courseId)
-      // The store will automatically refresh enrolled courses
     } catch (error) {
       // Handle error silently or set error state if needed
     }
@@ -394,6 +406,17 @@ export default function CourseDetail() {
                 {course.category?.name || 'General'}
               </span>
               <span className="text-white/80 text-sm">{course.level || course.difficulty_level || 'Beginner'}</span>
+              {course.is_free_trial && (
+                <span className="bg-green-500/80 text-white px-3 py-1 rounded-full text-sm font-medium">
+                  Free
+                </span>
+              )}
+              {isLocked && (
+                <span className="bg-amber-500/80 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Premium
+                </span>
+              )}
             </div>
             
             <h1 className="text-2xl md:text-4xl font-bold mb-4">{course.title}</h1>
@@ -474,7 +497,34 @@ export default function CourseDetail() {
                 )}
               </div>
 
-              {isEnrolled ? (
+              {isLocked ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <p className="text-sm font-semibold text-amber-900">
+                        Paid Plan Required
+                      </p>
+                    </div>
+                    <p className="text-sm text-amber-800">
+                      This course is available to paid subscribers. Sign up for a paid package 
+                      to unlock this course and the full catalog with quizzes and certificates.
+                    </p>
+                  </div>
+                  <Button
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                    size="lg"
+                    onClick={() => navigate('/pricing')}
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    View Paid Plans
+                  </Button>
+                  <Button variant="ghost" className="w-full">
+                    <Heart className="w-4 h-4 mr-2" />
+                    Add to Wishlist
+                  </Button>
+                </div>
+              ) : isEnrolled ? (
                 (() => {
                   const progressPct = getProgressPercentage();
                   const hasStarted = progressPct > 0 || !!course?.last_accessed;
@@ -491,12 +541,20 @@ export default function CourseDetail() {
                               Review Course
                             </Button>
                           </Link>
-                          <Link to={`/app/courses/${courseId}/completion`}>
-                            <Button variant="secondary" className="w-full" size="lg">
-                              <Award className="w-4 h-4 mr-2" />
-                              View Certificate
-                            </Button>
-                          </Link>
+                          {canAccessCertificates(course) ? (
+                            <Link to={`/app/courses/${courseId}/completion`}>
+                              <Button variant="secondary" className="w-full" size="lg">
+                                <Award className="w-4 h-4 mr-2" />
+                                View Certificate
+                              </Button>
+                            </Link>
+                          ) : (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                              <p className="text-sm text-amber-800">
+                                Certificates are available with a paid plan.
+                              </p>
+                            </div>
+                          )}
                         </>
                       ) : hasStarted && nextLessonId ? (
                         <Link to={`/app/courses/${courseId}/lesson/${nextLessonId}`}>
@@ -557,16 +615,21 @@ export default function CourseDetail() {
                   <Smartphone className="w-4 h-4 text-success-default" />
                   <span>Mobile and TV access</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-success-default" />
-                  <span>Certificate of completion</span>
-                </div>
+                {canAccessCertificates(course) && (
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-success-default" />
+                    <span>Certificate of completion</span>
+                  </div>
+                )}
               </div>
             </Card>
           </div>
         </div>
       </div>
       </div>
+
+      {/* Upgrade Banner for locked courses */}
+      {isLocked && <UpgradeBanner />}
 
       {/* Navigation Tabs */}
       <div className="border-b border-background-dark">

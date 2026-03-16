@@ -1,6 +1,6 @@
 // src/components/course/CourseForm.jsx
-import { useState, useEffect } from 'react';
-import { Paperclip } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Paperclip, AlertTriangle } from 'lucide-react';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuth } from '@/hooks/auth/useAuth';
 import Button from '@/components/ui/Button';
@@ -9,6 +9,8 @@ import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui';
 import ResourcesManager from './ResourcesManager';
+
+const FREE_TRIAL_COURSE_LIMIT = 5;
 
 export default function CourseForm({ course = null, onSuccess, onCancel }) {
   const { user } = useAuth();
@@ -21,6 +23,15 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
   const categories = useCourseStore(state => state.categories);
   const loadingCategories = useCourseStore(state => state.loading.categories);
   const fetchCategories = useCourseStore(state => state.actions.fetchCategories);
+  const allCourses = useCourseStore(state => state.courses);
+
+  const freeTrialCount = useMemo(() => {
+    const count = allCourses?.filter(c => c.is_free_trial).length || 0;
+    if (course?.is_free_trial) return count - 1;
+    return count;
+  }, [allCourses, course?.is_free_trial]);
+
+  const freeTrialLimitReached = freeTrialCount >= FREE_TRIAL_COURSE_LIMIT;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -33,6 +44,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
     thumbnail_url: '',
     slug: '',
     is_public: false,
+    is_free_trial: false,
     resources: []
   });
 
@@ -58,6 +70,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
         thumbnail_url: course.thumbnail_url || '',
         slug: course.slug || '',
         is_public: course.is_public || false,
+        is_free_trial: course.is_free_trial || false,
         resources: course.resources || []
       });
     }
@@ -366,6 +379,41 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
               <label className="ml-2 block text-sm text-gray-700">
                 Make this course publicly visible (even when not published)
               </label>
+            </div>
+
+            <div className={`p-3 rounded-lg border ${
+              freeTrialLimitReached && !formData.is_free_trial
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-green-50 border-green-200'
+            }`}>
+              <div className="flex items-center">
+                <input
+                  name="is_free_trial"
+                  type="checkbox"
+                  checked={formData.is_free_trial}
+                  onChange={handleInputChange}
+                  disabled={freeTrialLimitReached && !formData.is_free_trial}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <div className="ml-3">
+                  <label className="block text-sm font-medium text-green-800">
+                    Include in Free Trial Package
+                  </label>
+                  <p className="text-xs text-green-600 mt-0.5">
+                    Free trial courses are accessible without a paid subscription. These should be short 
+                    and do not include assessments or certificates.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {freeTrialCount} of {FREE_TRIAL_COURSE_LIMIT} free trial slots used
+                  </p>
+                </div>
+              </div>
+              {freeTrialLimitReached && !formData.is_free_trial && (
+                <div className="flex items-center gap-2 mt-2 p-2 bg-amber-100 rounded text-xs text-amber-800">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Free trial limit reached ({FREE_TRIAL_COURSE_LIMIT} courses). Remove a course from the free trial package to add this one.</span>
+                </div>
+              )}
             </div>
 
             {/* Course Resources Section - More Prominent */}

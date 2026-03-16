@@ -1,6 +1,6 @@
 // src/pages/public/Pricing.jsx
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { 
   Check, 
   X, 
@@ -11,32 +11,102 @@ import {
   ArrowRight,
   Shield,
   Zap,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Loader2
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import { redirectToCheckout, verifyCheckoutSession } from '@/services/stripe'
+import { useAuth } from '@/hooks/auth/useAuth'
+
+const STRIPE_PRICES = {
+  starter_monthly: import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY,
+  starter_annual: import.meta.env.VITE_STRIPE_PRICE_STARTER_ANNUAL,
+  pro_monthly: import.meta.env.VITE_STRIPE_PRICE_PRO_MONTHLY,
+  pro_annual: import.meta.env.VITE_STRIPE_PRICE_PRO_ANNUAL,
+  premium_monthly: import.meta.env.VITE_STRIPE_PRICE_PREMIUM_MONTHLY,
+  premium_annual: import.meta.env.VITE_STRIPE_PRICE_PREMIUM_ANNUAL,
+  team_monthly: import.meta.env.VITE_STRIPE_PRICE_TEAM_MONTHLY,
+  team_annual: import.meta.env.VITE_STRIPE_PRICE_TEAM_ANNUAL,
+  business_monthly: import.meta.env.VITE_STRIPE_PRICE_BUSINESS_MONTHLY,
+  business_annual: import.meta.env.VITE_STRIPE_PRICE_BUSINESS_ANNUAL,
+}
 
 export default function Pricing() {
-  const [billingCycle, setBillingCycle] = useState('monthly') // 'monthly' or 'annual'
+  const [billingCycle, setBillingCycle] = useState('monthly')
+  const [loadingPlan, setLoadingPlan] = useState(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { refreshUser } = useAuth()
+
+  useEffect(() => {
+    const status = searchParams.get('status')
+    const sessionId = searchParams.get('session_id')
+
+    if (status === 'success' && sessionId) {
+      verifyCheckoutSession(sessionId)
+        .then(async (result) => {
+          await refreshUser()
+          toast.success(`Payment successful! You're now on the ${result.plan} plan.`)
+        })
+        .catch(() => {
+          toast.success('Payment successful! Your plan will update shortly.')
+        })
+        .finally(() => {
+          setSearchParams({}, { replace: true })
+        })
+    } else if (status === 'cancelled') {
+      toast('Checkout was cancelled.', { icon: 'ℹ️' })
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, refreshUser, setSearchParams])
+
+  const resolvePlanInfo = (stripePriceKey) => {
+    const parts = stripePriceKey.split('_')
+    const planName = parts[0]
+    const corporatePlans = ['team', 'business']
+    const planType = corporatePlans.includes(planName) ? 'corporate' : 'individual'
+    return { planName, planType }
+  }
+
+  const handleSubscribe = async (stripePriceKey) => {
+    const priceId = STRIPE_PRICES[stripePriceKey]
+    if (!priceId) {
+      toast.error('This plan is not yet available for purchase. Please contact sales.')
+      return
+    }
+
+    const { planName, planType } = resolvePlanInfo(stripePriceKey)
+
+    setLoadingPlan(stripePriceKey)
+    try {
+      await redirectToCheckout(priceId, planName, planType)
+    } catch (error) {
+      toast.error(error.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoadingPlan(null)
+    }
+  }
 
   const individualPlans = [
     {
-      name: "Free",
-      price: 0,
+      name: "Starter",
+      price: billingCycle === 'monthly' ? 9 : 90,
+      originalPrice: billingCycle === 'annual' ? 108 : null,
       description: "Perfect for getting started with learning",
+      stripePriceKey: billingCycle === 'monthly' ? 'starter_monthly' : 'starter_annual',
       features: [
-        "Access to 50+ free courses",
+        "Access to 50+ courses",
         "Basic progress tracking",
         "Community forums",
         "Mobile app access",
         "Certificate of completion"
       ],
       limitations: [
-        "Limited to 5 courses per month",
         "No offline access",
         "Basic support only"
       ],
-      cta: "Get Started Free",
+      cta: "Get Started",
       popular: false,
       icon: Star
     },
@@ -45,6 +115,7 @@ export default function Pricing() {
       price: billingCycle === 'monthly' ? 29 : 290,
       originalPrice: billingCycle === 'annual' ? 348 : null,
       description: "Unlock your full learning potential",
+      stripePriceKey: billingCycle === 'monthly' ? 'pro_monthly' : 'pro_annual',
       features: [
         "Unlimited access to 1000+ courses",
         "Advanced progress analytics",
@@ -65,6 +136,7 @@ export default function Pricing() {
       price: billingCycle === 'monthly' ? 99 : 990,
       originalPrice: billingCycle === 'annual' ? 1188 : null,
       description: "For serious professionals and experts",
+      stripePriceKey: billingCycle === 'monthly' ? 'premium_monthly' : 'premium_annual',
       features: [
         "Everything in Pro",
         "Expert-led live sessions",
@@ -89,6 +161,7 @@ export default function Pricing() {
       originalPrice: billingCycle === 'annual' ? 180 : null,
       description: "Perfect for small teams and startups",
       userRange: "5-50 users",
+      stripePriceKey: billingCycle === 'monthly' ? 'team_monthly' : 'team_annual',
       features: [
         "All Pro features for team members",
         "Team progress dashboard",
@@ -112,6 +185,7 @@ export default function Pricing() {
       originalPrice: billingCycle === 'annual' ? 300 : null,
       description: "Advanced features for growing companies",
       userRange: "50-200 users",
+      stripePriceKey: billingCycle === 'monthly' ? 'business_monthly' : 'business_annual',
       features: [
         "Everything in Team",
         "Advanced analytics & reporting",
@@ -154,6 +228,12 @@ export default function Pricing() {
   const PlanCard = ({ plan, type = 'individual' }) => {
     const Icon = plan.icon
     const isEnterprise = plan.price === 'Custom'
+    const isLoading = loadingPlan === plan.stripePriceKey
+
+    const handleClick = () => {
+      if (isEnterprise) return
+      handleSubscribe(plan.stripePriceKey)
+    }
     
     return (
       <Card className={`relative p-8 ${plan.popular ? 'ring-2 ring-primary-default shadow-lg scale-105' : ''}`}>
@@ -222,15 +302,36 @@ export default function Pricing() {
           ))}
         </ul>
 
-        <Link to={isEnterprise ? "/contact" : "/signup"} className="block">
+        {isEnterprise ? (
+          <Link to="/contact" className="block">
+            <Button 
+              className="w-full"
+              variant="secondary"
+            >
+              {plan.cta}
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </Link>
+        ) : (
           <Button 
             className={`w-full ${plan.popular ? 'bg-primary-default hover:bg-primary-dark' : ''}`}
             variant={plan.popular ? 'default' : 'secondary'}
+            onClick={handleClick}
+            disabled={isLoading || !!loadingPlan}
           >
-            {plan.cta}
-            <ArrowRight className="w-4 h-4 ml-2" />
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Redirecting...
+              </>
+            ) : (
+              <>
+                {plan.cta}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
           </Button>
-        </Link>
+        )}
       </Card>
     )
   }
@@ -329,7 +430,7 @@ export default function Pricing() {
                 <thead>
                   <tr className="border-b border-background-dark">
                     <th className="text-left py-4 px-6 font-semibold text-text-dark">Features</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Free</th>
+                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Starter</th>
                     <th className="text-center py-4 px-6 font-semibold text-text-dark">Pro</th>
                     <th className="text-center py-4 px-6 font-semibold text-text-dark">Premium</th>
                     <th className="text-center py-4 px-6 font-semibold text-text-dark">Team</th>
@@ -338,19 +439,19 @@ export default function Pricing() {
                 </thead>
                 <tbody>
                   {[
-                    { feature: "Course Access", free: "50+ courses", pro: "1000+ courses", premium: "All courses", team: "All courses", business: "All courses" },
-                    { feature: "Progress Tracking", free: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Mobile App", free: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Offline Downloads", free: "✗", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Admin Dashboard", free: "✗", pro: "✗", premium: "✗", team: "✓", business: "✓" },
-                    { feature: "Team Reporting", free: "✗", pro: "✗", premium: "✗", team: "Basic", business: "Advanced" },
-                    { feature: "Custom Branding", free: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
-                    { feature: "API Access", free: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
-                    { feature: "Support", free: "Community", pro: "Email", premium: "Priority", team: "Email", business: "Priority" }
+                    { feature: "Course Access", starter: "50+ courses", pro: "1000+ courses", premium: "All courses", team: "All courses", business: "All courses" },
+                    { feature: "Progress Tracking", starter: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
+                    { feature: "Mobile App", starter: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
+                    { feature: "Offline Downloads", starter: "✗", pro: "✓", premium: "✓", team: "✓", business: "✓" },
+                    { feature: "Admin Dashboard", starter: "✗", pro: "✗", premium: "✗", team: "✓", business: "✓" },
+                    { feature: "Team Reporting", starter: "✗", pro: "✗", premium: "✗", team: "Basic", business: "Advanced" },
+                    { feature: "Custom Branding", starter: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
+                    { feature: "API Access", starter: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
+                    { feature: "Support", starter: "Community", pro: "Email", premium: "Priority", team: "Email", business: "Priority" }
                   ].map((row, index) => (
                     <tr key={index} className="border-b border-background-light">
                       <td className="py-4 px-6 font-medium text-text-dark">{row.feature}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.free}</td>
+                      <td className="py-4 px-6 text-center text-text-medium">{row.starter}</td>
                       <td className="py-4 px-6 text-center text-text-medium">{row.pro}</td>
                       <td className="py-4 px-6 text-center text-text-medium">{row.premium}</td>
                       <td className="py-4 px-6 text-center text-text-medium">{row.team}</td>
@@ -379,11 +480,11 @@ export default function Pricing() {
               },
               {
                 question: "Do you offer a free trial?",
-                answer: "All paid plans come with a 14-day free trial. No credit card required to start your trial."
+                answer: "All paid plans come with a 14-day free trial. Your card will not be charged until the trial period ends."
               },
               {
                 question: "What payment methods do you accept?",
-                answer: "We accept all major credit cards, PayPal, and for enterprise customers, we can arrange invoice billing."
+                answer: "We accept all major credit cards (Visa, Mastercard, American Express) securely processed through Stripe. For enterprise customers, we can arrange invoice billing."
               },
               {
                 question: "Is there a setup fee?",
@@ -415,11 +516,21 @@ export default function Pricing() {
             Join thousands of learners and organizations who trust Leadwise Academy for their development needs.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup">
-              <Button size="lg" className="bg-white text-primary-default hover:bg-gray-100">
-                Start Free Trial
-              </Button>
-            </Link>
+            <Button 
+              size="lg" 
+              className="bg-white text-primary-default hover:bg-gray-100"
+              onClick={() => handleSubscribe('starter_monthly')}
+              disabled={!!loadingPlan}
+            >
+              {loadingPlan === 'starter_monthly' ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Redirecting...
+                </>
+              ) : (
+                'Get Started for $9/mo'
+              )}
+            </Button>
             <Link to="/contact">
               <Button variant="ghost" size="lg" className="text-white border-white hover:bg-white hover:text-primary-default">
                 Contact Sales

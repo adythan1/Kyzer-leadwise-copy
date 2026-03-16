@@ -497,6 +497,19 @@ const useCourseStore = create((set, get) => ({
         return { data: null, error: 'Invalid user or course identifier' };
       }
       try {
+        // Verify the user has access to this course based on their subscription
+        const [profileResult, courseResult] = await Promise.all([
+          supabase.from(TABLES.PROFILES).select('subscription_plan').eq('id', userId).maybeSingle(),
+          supabase.from(TABLES.COURSES).select('is_free_trial').eq('id', courseId).maybeSingle(),
+        ]);
+
+        const userPlan = profileResult.data?.subscription_plan || 'free_trial';
+        const courseIsFreeTrial = courseResult.data?.is_free_trial;
+
+        if (userPlan === 'free_trial' && !courseIsFreeTrial) {
+          return { data: null, error: 'A paid subscription is required to access this course. Please upgrade your plan.' };
+        }
+
         // Check if already enrolled
         const { data: existingEnrollment, error: existingError } = await supabase
           .from(TABLES.COURSE_ENROLLMENTS)

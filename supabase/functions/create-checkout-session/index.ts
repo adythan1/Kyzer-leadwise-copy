@@ -1,0 +1,63 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import Stripe from "https://esm.sh/stripe@14.14.0?target=deno"
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
+    if (!stripeSecretKey) {
+      throw new Error('STRIPE_SECRET_KEY is not configured')
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    })
+
+    const { priceId, customerEmail, userId, planName, planType, successUrl, cancelUrl } = await req.json()
+
+    if (!priceId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing priceId' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl || `${Deno.env.get('VITE_APP_URL') || 'http://localhost:5173'}/pricing?session_id={CHECKOUT_SESSION_ID}&status=success`,
+      cancel_url: cancelUrl || `${Deno.env.get('VITE_APP_URL') || 'http://localhost:5173'}/pricing?status=cancelled`,
+      metadata: {
+        userId: userId || '',
+        planName: planName || '',
+        planType: planType || 'individual',
+      },
+    }
+
+    if (customerEmail) {
+      sessionParams.customer_email = customerEmail
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams)
+
+    return new Response(
+      JSON.stringify({ sessionId: session.id, url: session.url }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    console.error('Error creating checkout session:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})

@@ -26,6 +26,7 @@ import PresentationViewer from '@/components/course/PresentationViewer'
 import CertificatePreviewModal from '@/components/course/CertificatePreviewModal'
 import { useCourseStore } from '@/store/courseStore'
 import { useAuth } from '@/hooks/auth/useAuth'
+import { useSubscription } from '@/hooks/courses/useSubscription'
 import { supabase, TABLES } from '@/lib/supabase'
 import { 
   Button, 
@@ -657,6 +658,7 @@ export default function LessonView() {
   const { courseId, lessonId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { canAccessAssessments, canAccessCertificates } = useSubscription()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   
@@ -878,8 +880,7 @@ export default function LessonView() {
 
             activateKnowledgeCheck(null);
             
-            // Check if there's a course-level final assessment that hasn't been completed
-            if (courseFinalAssessment && !finalAssessmentCompleted) {
+            if (courseFinalAssessment && !finalAssessmentCompleted && canAccessAssessments(displayCourse)) {
               navigate(`/app/courses/${courseId}/quiz/${courseFinalAssessment.id}`);
             } else {
               navigate(`/app/courses/${courseId}/completion`);
@@ -3046,7 +3047,7 @@ export default function LessonView() {
                   {courseProgressData.completedCount}/{courseProgressData.totalCount}
                 </span>
               </div>
-              {courseProgressData.percentage === 100 && (
+              {courseProgressData.percentage === 100 && canAccessCertificates(displayCourse) && (
                 <Button
                   onClick={() => setShowCertificateModal(true)}
                   className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white"
@@ -3055,6 +3056,13 @@ export default function LessonView() {
                   <Award className="w-3.5 h-3.5 mr-1.5" />
                   View Certificate
                 </Button>
+              )}
+              {courseProgressData.percentage === 100 && !canAccessCertificates(displayCourse) && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                  <p className="text-xs text-amber-800">
+                    Certificates are available with a paid plan.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -3072,7 +3080,7 @@ export default function LessonView() {
                   }
                 });
 
-                if (courseFinalAssessment) {
+                if (courseFinalAssessment && canAccessAssessments(displayCourse)) {
                   combinedItems.push({ type: 'finalAssessment', data: courseFinalAssessment, index: itemIndex++ });
                 }
 
@@ -3497,7 +3505,7 @@ export default function LessonView() {
                       showError('Keep going! Mark every lesson as completed to finish the course.');
                       return;
                     }
-                    if (courseFinalAssessment && !finalAssessmentCompleted) {
+                    if (courseFinalAssessment && !finalAssessmentCompleted && canAccessAssessments(displayCourse)) {
                       navigate(`/app/courses/${courseId}/quiz/${courseFinalAssessment.id}`);
                     } else {
                       navigate(`/app/courses/${courseId}/completion`);
@@ -3505,7 +3513,7 @@ export default function LessonView() {
                   }}
                   className="flex items-center gap-2"
                 >
-                  {courseFinalAssessment && !finalAssessmentCompleted
+                  {courseFinalAssessment && !finalAssessmentCompleted && canAccessAssessments(displayCourse)
                     ? 'Take Final Assessment'
                     : 'Complete Course'}
                   <ChevronRight className="w-4 h-4" />
@@ -3547,7 +3555,7 @@ export default function LessonView() {
       </Modal>
 
       {/* Certificate Preview Modal */}
-      {showCertificateModal && (
+      {showCertificateModal && canAccessCertificates(displayCourse) && (
         <CertificatePreviewModal
           courseId={courseId}
           courseName={course?.title}
