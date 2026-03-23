@@ -89,12 +89,12 @@ const CourseCatalog = () => {
     { id: "duration", name: "Shortest First", icon: Clock },
   ];
 
-  // Fetch courses on mount
+  // Fetch courses on mount (catalog rules: published, catalog-visible, org restriction)
   useEffect(() => {
     if (user?.id) {
-      fetchCourses({}, user.id);
+      fetchCourses({ learnerCatalog: true }, user.id);
     } else {
-      fetchCourses();
+      fetchCourses({ learnerCatalog: true });
     }
   }, [fetchCourses, user?.id]);
 
@@ -531,7 +531,10 @@ const CourseCatalog = () => {
           Error Loading Courses
         </h3>
         <p className="text-gray-600 mb-4">{error}</p>
-        <ActionButton action="refresh" onClick={() => fetchCourses()}>
+        <ActionButton
+          action="refresh"
+          onClick={() => fetchCourses({ learnerCatalog: true }, user?.id ?? null)}
+        >
           Try Again
         </ActionButton>
       </Card>

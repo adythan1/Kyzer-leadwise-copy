@@ -382,6 +382,27 @@ const useCourseStore = create((set, get) => ({
           query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
         }
 
+        // Learner catalog: published + shown in catalog + org scope (individuals vs one customer org)
+        if (filters.learnerCatalog) {
+          query = query.eq('is_published', true).eq('catalog_visible', true);
+
+          let viewerOrgId = filters.viewerOrganizationId;
+          if (viewerOrgId === undefined && userId) {
+            const { data: profileRow } = await supabase
+              .from(TABLES.PROFILES)
+              .select('organization_id')
+              .eq('id', userId)
+              .maybeSingle();
+            viewerOrgId = profileRow?.organization_id ?? null;
+          }
+
+          if (viewerOrgId) {
+            query = query.or(`restricted_organization_id.is.null,restricted_organization_id.eq.${viewerOrgId}`);
+          } else {
+            query = query.is('restricted_organization_id', null);
+          }
+        }
+
         const { data, error } = await query;
         if (error) throw error;
 

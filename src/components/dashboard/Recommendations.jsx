@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Clock, Users, BookOpen } from 'lucide-react';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { supabase } from '@/lib/supabase';
+import { supabase, TABLES } from '@/lib/supabase';
 
 const Recommendations = () => {
   const { user } = useAuth();
@@ -17,6 +17,14 @@ const Recommendations = () => {
       }
 
       try {
+        const { data: profileRow } = await supabase
+          .from(TABLES.PROFILES)
+          .select('organization_id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const viewerOrgId = profileRow?.organization_id ?? null;
+
         const { data: enrollments } = await supabase
           .from('course_enrollments')
           .select('course_id, courses(category)')
@@ -31,11 +39,22 @@ const Recommendations = () => {
           ),
         ];
 
-        const { data: allCourses, error } = await supabase
-          .from('courses')
+        let coursesQuery = supabase
+          .from(TABLES.COURSES)
           .select('id, title, description, category, duration_minutes, thumbnail_url, difficulty_level, status')
           .eq('status', 'published')
+          .eq('catalog_visible', true)
           .limit(50);
+
+        if (viewerOrgId) {
+          coursesQuery = coursesQuery.or(
+            `restricted_organization_id.is.null,restricted_organization_id.eq.${viewerOrgId}`
+          );
+        } else {
+          coursesQuery = coursesQuery.is('restricted_organization_id', null);
+        }
+
+        const { data: allCourses, error } = await coursesQuery;
 
         if (error) throw error;
 

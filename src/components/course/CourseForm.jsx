@@ -9,6 +9,7 @@ import Input from '@/components/ui/Input';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui';
 import ResourcesManager from './ResourcesManager';
+import { supabase, TABLES } from '@/lib/supabase';
 
 const FREE_TRIAL_COURSE_LIMIT = 5;
 
@@ -45,9 +46,12 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
     slug: '',
     is_public: false,
     is_free_trial: false,
+    catalog_visible: true,
+    restricted_organization_id: '',
     resources: []
   });
 
+  const [organizations, setOrganizations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditing] = useState(!!course);
@@ -71,6 +75,8 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
         slug: course.slug || '',
         is_public: course.is_public || false,
         is_free_trial: course.is_free_trial || false,
+        catalog_visible: course.catalog_visible !== false,
+        restricted_organization_id: course.restricted_organization_id || '',
         resources: course.resources || []
       });
     }
@@ -80,6 +86,20 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from(TABLES.ORGANIZATIONS)
+        .select('id, name')
+        .order('name');
+      if (!cancelled) setOrganizations(data || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -148,6 +168,8 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
         ...formData,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
         category_id: formData.category_id || null,
+        catalog_visible: Boolean(formData.catalog_visible),
+        restricted_organization_id: formData.restricted_organization_id?.trim() || null,
         // Convert text fields to arrays if they're expected as arrays by the database
         learning_objectives: formData.learning_objectives ? 
           formData.learning_objectives.split('\n').filter(obj => obj.trim()) : 
@@ -414,6 +436,51 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
                   <span>Free trial limit reached ({FREE_TRIAL_COURSE_LIMIT} courses). Remove a course from the free trial package to add this one.</span>
                 </div>
               )}
+            </div>
+
+            <div className="md:col-span-2 p-4 rounded-lg border border-gray-200 bg-gray-50">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Catalog &amp; audience</h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    name="catalog_visible"
+                    type="checkbox"
+                    checked={formData.catalog_visible}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 mt-1 text-blue-600 border-gray-300 rounded"
+                  />
+                  <div>
+                    <label className="text-sm font-medium text-gray-800">Show in course catalog</label>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Turn off to hide this course from the catalog for everyone. Enrolled learners keep access
+                      from My Courses and direct links—useful for a single customer or private cohort.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="restricted_organization_id" className="block text-sm font-medium text-gray-700 mb-1">
+                    Restrict catalog visibility to one organization (optional)
+                  </label>
+                  <select
+                    id="restricted_organization_id"
+                    name="restricted_organization_id"
+                    value={formData.restricted_organization_id}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  >
+                    <option value="">All eligible learners (individuals and any organization)</option>
+                    {organizations.map((org) => (
+                      <option key={org.id} value={org.id}>
+                        {org.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    When set, only learners in that organization see the course in the catalog. Individual accounts
+                    (no organization) will not see it there—enroll them manually if needed.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Course Resources Section - More Prominent */}
