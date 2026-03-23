@@ -33,6 +33,11 @@ const STRIPE_PRICES = {
   business_annual: import.meta.env.VITE_STRIPE_PRICE_BUSINESS_ANNUAL,
 }
 
+/** Env variable name for a plan key, e.g. team_monthly → VITE_STRIPE_PRICE_TEAM_MONTHLY */
+function stripePriceEnvVarName(stripePriceKey) {
+  return `VITE_STRIPE_PRICE_${String(stripePriceKey).toUpperCase()}`
+}
+
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [loadingPlan, setLoadingPlan] = useState(null)
@@ -72,7 +77,10 @@ export default function Pricing() {
   const handleSubscribe = async (stripePriceKey) => {
     const priceId = STRIPE_PRICES[stripePriceKey]
     if (!priceId) {
-      toast.error('This plan is not yet available for purchase. Please contact sales.')
+      const envName = stripePriceEnvVarName(stripePriceKey)
+      toast.error(
+        `Add your Stripe Price ID: set ${envName}=price_... in .env (from Stripe → Products → Prices), then restart the dev server.`
+      )
       return
     }
 
@@ -229,6 +237,8 @@ export default function Pricing() {
     const Icon = plan.icon
     const isEnterprise = plan.price === 'Custom'
     const isLoading = loadingPlan === plan.stripePriceKey
+    const hasStripePriceId =
+      isEnterprise || Boolean(plan.stripePriceKey && STRIPE_PRICES[plan.stripePriceKey])
 
     const handleClick = () => {
       if (isEnterprise) return
@@ -317,13 +327,20 @@ export default function Pricing() {
             className={`w-full ${plan.popular ? 'bg-primary-default hover:bg-primary-dark' : ''}`}
             variant={plan.popular ? 'default' : 'secondary'}
             onClick={handleClick}
-            disabled={isLoading || !!loadingPlan}
+            disabled={isLoading || !!loadingPlan || !hasStripePriceId}
+            title={
+              !hasStripePriceId && plan.stripePriceKey
+                ? `Set ${stripePriceEnvVarName(plan.stripePriceKey)} in .env`
+                : undefined
+            }
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Redirecting...
               </>
+            ) : !hasStripePriceId ? (
+              'Billing not configured'
             ) : (
               <>
                 {plan.cta}
@@ -520,13 +537,20 @@ export default function Pricing() {
               size="lg" 
               className="bg-white text-primary-default hover:bg-gray-100"
               onClick={() => handleSubscribe('starter_monthly')}
-              disabled={!!loadingPlan}
+              disabled={!!loadingPlan || !STRIPE_PRICES.starter_monthly}
+              title={
+                !STRIPE_PRICES.starter_monthly
+                  ? `Set ${stripePriceEnvVarName('starter_monthly')} in .env`
+                  : undefined
+              }
             >
               {loadingPlan === 'starter_monthly' ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Redirecting...
                 </>
+              ) : !STRIPE_PRICES.starter_monthly ? (
+                'Billing not configured'
               ) : (
                 'Get Started for $9/mo'
               )}

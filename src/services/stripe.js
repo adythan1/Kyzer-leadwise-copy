@@ -5,9 +5,14 @@ let stripePromise = null
 
 export const getStripe = () => {
   if (!stripePromise) {
-    const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+    // Prefer VITE_STRIPE_PUBLISHABLE (no "KEY" in name) — some hosts (e.g. Vercel) warn on VITE_* + KEY.
+    // Value is still Stripe's publishable key pk_... which is safe to expose in the browser.
+    const key =
+      import.meta.env.VITE_STRIPE_PUBLISHABLE || import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
     if (!key) {
-      throw new Error('Missing VITE_STRIPE_PUBLISHABLE_KEY environment variable')
+      throw new Error(
+        'Missing VITE_STRIPE_PUBLISHABLE (or legacy VITE_STRIPE_PUBLISHABLE_KEY) environment variable'
+      )
     }
     stripePromise = loadStripe(key)
   }
@@ -39,7 +44,17 @@ export const redirectToCheckout = async (priceId, planName = '', planType = 'ind
   })
 
   if (error) {
-    throw new Error(error.message || 'Failed to create checkout session')
+    const raw = error.message || ''
+    if (
+      raw.includes('Failed to send a request to the Edge Function') ||
+      raw.includes('Edge Function') ||
+      raw.includes('CORS')
+    ) {
+      throw new Error(
+        'Checkout could not reach the server. Redeploy the create-checkout-session Edge Function, set STRIPE_SECRET_KEY in Supabase secrets, and use the same project as VITE_SUPABASE_URL. See docs/STRIPE_CHECKOUT.md.'
+      )
+    }
+    throw new Error(raw || 'Failed to create checkout session')
   }
 
   if (data?.url) {
@@ -68,7 +83,17 @@ export const verifyCheckoutSession = async (sessionId) => {
   })
 
   if (error) {
-    throw new Error(error.message || 'Failed to verify checkout session')
+    const raw = error.message || ''
+    if (
+      raw.includes('Failed to send a request to the Edge Function') ||
+      raw.includes('Edge Function') ||
+      raw.includes('CORS')
+    ) {
+      throw new Error(
+        'Could not verify checkout. Redeploy verify-checkout-session and check Supabase secrets. See docs/STRIPE_CHECKOUT.md.'
+      )
+    }
+    throw new Error(raw || 'Failed to verify checkout session')
   }
 
   return data
