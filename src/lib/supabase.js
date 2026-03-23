@@ -115,6 +115,9 @@ export const TABLES = {
   
   // Reviews
   COURSE_REVIEWS: 'course_reviews',
+
+  // Course community / discussion (enrolled learners only, RLS)
+  COURSE_DISCUSSION_POSTS: 'course_discussion_posts',
 };
 
 // ==========================================

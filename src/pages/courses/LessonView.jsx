@@ -1,7 +1,7 @@
 // src/pages/courses/LessonView.jsx
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 import ReactPlayer from 'react-player'
-import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { 
   Play, 
   Pause,
@@ -19,7 +19,8 @@ import {
   ExternalLink,
   File,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  MessageCircle
 } from 'lucide-react'
 import { ScormPlayer } from '@/components/course'
 import PresentationViewer from '@/components/course/PresentationViewer'
@@ -3080,6 +3081,13 @@ export default function LessonView() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              to={`/app/courses/${courseId}?tab=community`}
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-primary-default hover:text-primary-dark px-2 py-1 rounded-md hover:bg-background-light"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Community
+            </Link>
             <Button
               variant="ghost"
               size="sm"

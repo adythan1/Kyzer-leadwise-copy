@@ -1,6 +1,6 @@
 // src/pages/courses/CourseDetail.jsx
-import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useCourseStore } from '@/store/courseStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { useSubscription } from '@/hooks/courses/useSubscription'
@@ -33,6 +33,9 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import ShareCourseModal from '@/components/course/ShareCourseModal'
 import { useToast } from '@/components/ui'
 import { UpgradeBanner, FreeTrialBadge } from '@/components/course/UpgradePrompt'
+import CourseDiscussionPanel from '@/components/course/CourseDiscussionPanel'
+
+const COURSE_DETAIL_TABS = ['overview', 'curriculum', 'instructor', 'reviews', 'resources', 'community']
 
 // Normalize URL to ensure it has a protocol (for existing data that might not have it)
 const normalizeUrl = (url) => {
@@ -60,6 +63,7 @@ const downloadFile = (url, filename) => {
 export default function CourseDetail() {
   const { courseId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
   const { isFreeTrial, canAccessCourse, canAccessCertificates } = useSubscription()
   // Store selectors - individual to prevent infinite loops
@@ -77,7 +81,36 @@ export default function CourseDetail() {
   const fetchCourseReviews = useCourseStore(state => state.actions.fetchCourseReviews);
   const getCourseRatingStats = useCourseStore(state => state.actions.getCourseRatingStats);
   
-  const [activeTab, setActiveTab] = useState('overview')
+  const tabFromUrl = searchParams.get('tab')
+  const [activeTab, setActiveTab] = useState(() =>
+    COURSE_DETAIL_TABS.includes(tabFromUrl) ? tabFromUrl : 'overview'
+  )
+
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (t && COURSE_DETAIL_TABS.includes(t)) {
+      setActiveTab(t)
+    }
+  }, [searchParams])
+
+  const handleTabChange = useCallback(
+    (tabId) => {
+      setActiveTab(tabId)
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          if (tabId === 'overview') {
+            next.delete('tab')
+          } else {
+            next.set('tab', tabId)
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
   const [expandedModule, setExpandedModule] = useState(null)
   const [lessons, setLessons] = useState([])
   const [modules, setModules] = useState([])
@@ -639,11 +672,12 @@ export default function CourseDetail() {
             { id: 'curriculum', label: 'Curriculum' },
             { id: 'instructor', label: 'Instructor' },
             { id: 'reviews', label: 'Reviews' },
+            { id: 'community', label: 'Community' },
             { id: 'resources', label: 'Resources' }
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
                   ? 'border-primary-default text-primary-default'
@@ -970,6 +1004,14 @@ export default function CourseDetail() {
                 <p className="text-text-medium">No reviews available for this course yet.</p>
               )}
             </Card>
+          )}
+
+          {activeTab === 'community' && (
+            <CourseDiscussionPanel
+              courseId={courseId}
+              userId={user?.id}
+              isEnrolled={isEnrolled}
+            />
           )}
 
           {activeTab === 'resources' && (
