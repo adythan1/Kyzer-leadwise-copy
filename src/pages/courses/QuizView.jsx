@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useCourseStore } from '@/store/courseStore';
 import { useToast } from '@/components/ui';
 import { Button, Card } from '@/components/ui';
 import BackButton from '@/components/ui/BackButton';
+import { supabase, TABLES } from '@/lib/supabase';
 import { 
   CheckCircle, 
   Clock, 
@@ -18,6 +19,22 @@ import {
   Calendar
 } from 'lucide-react';
 import QuizResult from '@/components/quiz/QuizResult';
+
+function getNotesFromProgressMetadata(metadata) {
+  if (metadata == null) return '';
+  let parsed = metadata;
+  if (typeof metadata === 'string') {
+    try {
+      parsed = JSON.parse(metadata);
+    } catch {
+      return '';
+    }
+  }
+  if (typeof parsed === 'object' && parsed !== null && typeof parsed.notes === 'string') {
+    return parsed.notes.trim();
+  }
+  return '';
+}
 
 const QuizView = () => {
   const { courseId, quizId } = useParams();
@@ -48,13 +65,60 @@ const QuizView = () => {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [quizCompletionData, setQuizCompletionData] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  /** Lesson notes aggregated for final-assessment review (before timer starts) */
+  const [courseNotesForFinalReview, setCourseNotesForFinalReview] = useState([]);
+
   const quizTimerRef = useRef(null);
   const quizBlockRef = useRef(null);
   
   // Track if data has been loaded to prevent infinite loops
   const dataLoadedRef = useRef({ courseId: null, quizId: null });
   const isLoadingRef = useRef(false);
+
+  const isCourseLevelGradedQuiz = useMemo(() => {
+    return Boolean(quiz && !quiz.lesson_id && quiz.quiz_type === 'graded');
+  }, [quiz]);
+
+  // Load all saved lesson notes for this course (final assessment pre-start only)
+  useEffect(() => {
+    const loadCourseNotes = async () => {
+      if (!user?.id || !courseId || !lessons.length || !isCourseLevelGradedQuiz) {
+        setCourseNotesForFinalReview([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from(TABLES.LESSON_PROGRESS)
+        .select('lesson_id, metadata')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+
+      if (error) {
+        setCourseNotesForFinalReview([]);
+        return;
+      }
+
+      const titleById = new Map(lessons.map((l) => [l.id, l.title || 'Lesson']));
+      const orderById = new Map(
+        lessons.map((l, i) => [l.id, l.order_index != null ? l.order_index : i])
+      );
+
+      const rows = [];
+      for (const row of data || []) {
+        const text = getNotesFromProgressMetadata(row.metadata);
+        if (!text) continue;
+        rows.push({
+          lessonId: row.lesson_id,
+          lessonTitle: titleById.get(row.lesson_id) || 'Lesson',
+          notes: text,
+          order: orderById.get(row.lesson_id) ?? 9999,
+        });
+      }
+      rows.sort((a, b) => a.order - b.order);
+      setCourseNotesForFinalReview(rows);
+    };
+
+    loadCourseNotes();
+  }, [user?.id, courseId, lessons, isCourseLevelGradedQuiz]);
 
   // Load course and quiz data
   useEffect(() => {
@@ -271,8 +335,8 @@ const QuizView = () => {
               completedAt: new Date().toISOString()
             });
           }
-        } catch (error) {
-          console.error('Error submitting quiz attempt:', error);
+        } catch {
+          showError('Could not save quiz results. Please try again.');
         }
       }
       
@@ -289,8 +353,7 @@ const QuizView = () => {
       
       setShowQuizResult(true);
       
-    } catch (error) {
-      console.error('Error submitting quiz:', error);
+    } catch {
       showError('Failed to submit quiz');
     } finally {
       setIsSubmitting(false);
@@ -434,19 +497,52 @@ const QuizView = () => {
               </div>
 
               {!quizStarted && !quizCompleted && (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="w-8 h-8 text-primary-default" />
+                <div className="py-8">
+                  {isCourseLevelGradedQuiz && (
+                    <div className="mb-8 text-left rounded-lg border border-border-default bg-background-light/60 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-border-default bg-background-light">
+                        <h3 className="font-semibold text-text-dark flex items-center gap-2">
+                          <BookOpen className="w-5 h-5 text-primary-default flex-shrink-0" />
+                          Your notes from this course
+                        </h3>
+                        <p className="text-sm text-text-light mt-1">
+                          All notes you saved on lesson pages appear here so you can review before the timer starts.
+                        </p>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto p-4 space-y-4">
+                        {courseNotesForFinalReview.length === 0 ? (
+                          <p className="text-sm text-text-light text-center py-6">
+                            No saved lesson notes yet. Use the Notes tab on each lesson while you study.
+                          </p>
+                        ) : (
+                          courseNotesForFinalReview.map((item) => (
+                            <div
+                              key={item.lessonId}
+                              className="rounded-md border border-border-default bg-white p-4 shadow-sm"
+                            >
+                              <h4 className="text-sm font-medium text-primary-default mb-2">{item.lessonTitle}</h4>
+                              <div className="text-sm text-text-dark whitespace-pre-wrap font-sans">{item.notes}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BookOpen className="w-8 h-8 text-primary-default" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-text-dark mb-2">Ready to Start?</h3>
+                    <p className="text-text-light mb-6">
+                      This quiz contains {quizQuestions.length} questions and
+                      {quiz.time_limit_minutes ? ` has a ${quiz.time_limit_minutes} minute time limit.` : ' has no time limit.'}
+                    </p>
+                    <Button onClick={startQuiz} size="lg">
+                      <Play className="w-4 h-4 mr-2" />
+                      Start Quiz
+                    </Button>
                   </div>
-                  <h3 className="text-xl font-semibold text-text-dark mb-2">Ready to Start?</h3>
-                  <p className="text-text-light mb-6">
-                    This quiz contains {quizQuestions.length} questions and 
-                    {quiz.time_limit_minutes ? ` has a ${quiz.time_limit_minutes} minute time limit.` : ' has no time limit.'}
-                  </p>
-                  <Button onClick={startQuiz} size="lg">
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Quiz
-                  </Button>
                 </div>
               )}
 
