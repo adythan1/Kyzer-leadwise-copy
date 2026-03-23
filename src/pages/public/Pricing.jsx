@@ -38,6 +38,24 @@ function stripePriceEnvVarName(stripePriceKey) {
   return `VITE_STRIPE_PRICE_${String(stripePriceKey).toUpperCase()}`
 }
 
+/**
+ * Checkout line_items require a Stripe Price id (price_...).
+ * Product ids (prod_...) look valid in .env but will fail at Stripe — common mix-up.
+ */
+function isConfiguredStripePriceId(raw) {
+  if (raw === undefined || raw === null) return false
+  const s = String(raw).trim()
+  return s.length > 0 && s.startsWith('price_')
+}
+
+/** 'missing' | 'invalid' | 'ok' */
+function stripePriceConfigState(stripePriceKey) {
+  const raw = STRIPE_PRICES[stripePriceKey]
+  if (raw === undefined || raw === null || !String(raw).trim()) return 'missing'
+  if (!isConfiguredStripePriceId(raw)) return 'invalid'
+  return 'ok'
+}
+
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [loadingPlan, setLoadingPlan] = useState(null)
@@ -76,10 +94,16 @@ export default function Pricing() {
 
   const handleSubscribe = async (stripePriceKey) => {
     const priceId = STRIPE_PRICES[stripePriceKey]
-    if (!priceId) {
-      const envName = stripePriceEnvVarName(stripePriceKey)
+    const envName = stripePriceEnvVarName(stripePriceKey)
+    if (!priceId || !String(priceId).trim()) {
       toast.error(
-        `Add your Stripe Price ID: set ${envName}=price_... in .env (from Stripe → Products → Prices), then restart the dev server.`
+        `Add ${envName}=price_... in Vercel (project) env and redeploy. Team/Business use TEAM_MONTHLY / BUSINESS_MONTHLY, not STARTER_* only.`
+      )
+      return
+    }
+    if (!isConfiguredStripePriceId(priceId)) {
+      toast.error(
+        `${envName} must be a Stripe Price ID (starts with price_), not a Product ID (prod_). Copy it from Stripe → Product → Pricing table.`
       )
       return
     }
@@ -237,8 +261,8 @@ export default function Pricing() {
     const Icon = plan.icon
     const isEnterprise = plan.price === 'Custom'
     const isLoading = loadingPlan === plan.stripePriceKey
-    const hasStripePriceId =
-      isEnterprise || Boolean(plan.stripePriceKey && STRIPE_PRICES[plan.stripePriceKey])
+    const priceState = isEnterprise ? 'ok' : stripePriceConfigState(plan.stripePriceKey)
+    const hasStripePriceId = priceState === 'ok'
 
     const handleClick = () => {
       if (isEnterprise) return
@@ -330,7 +354,9 @@ export default function Pricing() {
             disabled={isLoading || !!loadingPlan || !hasStripePriceId}
             title={
               !hasStripePriceId && plan.stripePriceKey
-                ? `Set ${stripePriceEnvVarName(plan.stripePriceKey)} in .env`
+                ? priceState === 'invalid'
+                  ? `Use price_... not prod_... — ${stripePriceEnvVarName(plan.stripePriceKey)}`
+                  : `Set ${stripePriceEnvVarName(plan.stripePriceKey)} in Vercel project env and redeploy`
                 : undefined
             }
           >
@@ -340,7 +366,7 @@ export default function Pricing() {
                 Redirecting...
               </>
             ) : !hasStripePriceId ? (
-              'Billing not configured'
+              priceState === 'invalid' ? 'Invalid Price ID (use price_…)' : 'Billing not configured'
             ) : (
               <>
                 {plan.cta}
@@ -352,6 +378,8 @@ export default function Pricing() {
       </Card>
     )
   }
+
+  const starterPriceState = stripePriceConfigState('starter_monthly')
 
   return (
     <div className="min-h-screen">
@@ -537,11 +565,13 @@ export default function Pricing() {
               size="lg" 
               className="bg-white text-primary-default hover:bg-gray-100"
               onClick={() => handleSubscribe('starter_monthly')}
-              disabled={!!loadingPlan || !STRIPE_PRICES.starter_monthly}
+              disabled={!!loadingPlan || starterPriceState !== 'ok'}
               title={
-                !STRIPE_PRICES.starter_monthly
-                  ? `Set ${stripePriceEnvVarName('starter_monthly')} in .env`
-                  : undefined
+                starterPriceState === 'missing'
+                  ? `Set ${stripePriceEnvVarName('starter_monthly')} in Vercel and redeploy`
+                  : starterPriceState === 'invalid'
+                    ? 'Use price_... from Stripe Pricing, not prod_...'
+                    : undefined
               }
             >
               {loadingPlan === 'starter_monthly' ? (
@@ -549,8 +579,8 @@ export default function Pricing() {
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Redirecting...
                 </>
-              ) : !STRIPE_PRICES.starter_monthly ? (
-                'Billing not configured'
+              ) : starterPriceState !== 'ok' ? (
+                starterPriceState === 'invalid' ? 'Invalid Price ID' : 'Billing not configured'
               ) : (
                 'Get Started for $9/mo'
               )}

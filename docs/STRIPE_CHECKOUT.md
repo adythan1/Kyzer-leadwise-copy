@@ -2,15 +2,22 @@
 
 ## Frontend: Price IDs (`VITE_STRIPE_PRICE_*`)
 
-The Pricing page maps each plan to a Stripe **Price** ID via environment variables (see `.env.example`). If a variable is missing, checkout is disabled for that plan and the UI shows **Billing not configured**.
+The Pricing page maps **each** plan to its own Stripe **Price** ID (see `.env.example`):
 
-Example for Team monthly:
+| UI section   | Environment variables (examples) |
+|-------------|-----------------------------------|
+| Individual  | `VITE_STRIPE_PRICE_STARTER_MONTHLY`, `_ANNUAL`, `PRO_*`, `PREMIUM_*` |
+| Corporate   | `VITE_STRIPE_PRICE_TEAM_MONTHLY`, `_ANNUAL`, `BUSINESS_*` |
 
-```bash
-VITE_STRIPE_PRICE_TEAM_MONTHLY=price_xxxxxxxx
-```
+Setting only **Starter** variables does **not** enable Team or Business cards — add `TEAM_*` and `BUSINESS_*` separately.
 
-After editing `.env`, restart Vite (`npm run dev`). Use **test** mode Price IDs with a test publishable key.
+Use the **Price** id from Stripe (**`price_...`**), under the product’s **Pricing** table. Do **not** use a **Product** id (`prod_...`); Checkout will reject it.
+
+If a variable is missing or wrong, the UI shows **Billing not configured** or **Invalid Price ID**.
+
+**Vercel:** Add variables on the **project** that builds this app (or team-shared vars that apply to that project), then **redeploy** — Vite bakes `VITE_*` in at build time.
+
+After editing `.env` locally, restart Vite (`npm run dev`). Use **test** Price IDs with a **test** publishable key.
 
 ### Vercel warning about `VITE_*` and `KEY`
 
