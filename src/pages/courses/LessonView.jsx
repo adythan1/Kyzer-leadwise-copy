@@ -654,6 +654,16 @@ const PresentationWrapper = memo(({
 });
 PresentationWrapper.displayName = 'PresentationWrapper';
 
+function formatElapsedTime(totalSeconds) {
+  const hrs = Math.floor(totalSeconds / 3600)
+  const mins = Math.floor((totalSeconds % 3600) / 60)
+  const secs = totalSeconds % 60
+  if (hrs > 0) {
+    return `${hrs}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+  return `${mins}:${String(secs).padStart(2, '0')}`
+}
+
 export default function LessonView() {
   const { courseId, lessonId } = useParams()
   const navigate = useNavigate()
@@ -722,6 +732,52 @@ export default function LessonView() {
   const [courseFinalAssessment, setCourseFinalAssessment] = useState(null)
   const [finalAssessmentCompleted, setFinalAssessmentCompleted] = useState(false)
   const { success, error: showError } = useToast()
+
+  // Live session timer - ticks every second, pauses when tab is hidden
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const isPageVisibleRef = useRef(true)
+  const timerInitLessonRef = useRef(null)
+
+  // Initialize elapsed time from saved progress when lesson changes
+  useEffect(() => {
+    if (timerInitLessonRef.current !== lessonId) {
+      timerInitLessonRef.current = null
+      setElapsedSeconds(0)
+    }
+  }, [lessonId])
+
+  useEffect(() => {
+    if (!lesson?.id || !course?.id || timerInitLessonRef.current === lesson.id) return
+    const progress = courseProgress[course.id]?.[lesson.id]
+    if (progress !== undefined) {
+      timerInitLessonRef.current = lesson.id
+      setElapsedSeconds(progress?.time_spent_seconds || 0)
+    }
+  }, [lesson?.id, course?.id, courseProgress])
+
+  // 1-second tick that pauses when the tab/window is hidden
+  useEffect(() => {
+    if (!lesson?.id || !user?.id) return
+
+    isPageVisibleRef.current = document.visibilityState === 'visible'
+
+    const handleVisibility = () => {
+      isPageVisibleRef.current = document.visibilityState === 'visible'
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    const tickId = setInterval(() => {
+      if (isPageVisibleRef.current) {
+        setElapsedSeconds(prev => prev + 1)
+      }
+    }, 1000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      clearInterval(tickId)
+    }
+  }, [lesson?.id, user?.id])
+
   const knowledgeChecks = useMemo(() => {
     if (!lesson?.id) return [];
     const lessonQuizzes = quizzesByLesson[lesson.id] || [];
@@ -801,7 +857,7 @@ export default function LessonView() {
     return progress.review_completed === true;
   }, [isCourseCompleted, user?.id, lesson, course, courseProgress, courseId]);
 
-  // Calculate time remaining for display
+  // Calculate time remaining for display (uses live elapsedSeconds)
   const timeRemainingInfo = useMemo(() => {
     if (isCourseCompleted || timeRequirementMet) return null;
     if (!user?.id || !lesson || !course) return null;
@@ -809,20 +865,17 @@ export default function LessonView() {
     const progress = courseProgress[course.id]?.[lesson.id];
     if (!progress || !progress.minimum_time_required) return null;
     
-    const timeSpent = progress.time_spent_seconds || 0;
     const timeRequired = progress.minimum_time_required;
-    const timeRemaining = Math.max(0, timeRequired - timeSpent);
-    const minutesRemaining = Math.ceil(timeRemaining / 60);
+    const timeRemaining = Math.max(0, timeRequired - elapsedSeconds);
     const totalMinutesRequired = Math.ceil(timeRequired / 60);
     
     return {
       timeRemaining,
-      minutesRemaining,
       totalMinutesRequired,
-      timeSpent,
+      timeSpent: elapsedSeconds,
       timeRequired
     };
-  }, [isCourseCompleted, timeRequirementMet, user?.id, lesson, course, courseProgress, courseId]);
+  }, [isCourseCompleted, timeRequirementMet, user?.id, lesson, course, courseProgress, courseId, elapsedSeconds]);
 
   const goToNextLesson = useCallback(async (shouldBypassKnowledgeChecks = false) => {
     // For completed courses, allow free navigation (review mode)
@@ -1433,11 +1486,25 @@ export default function LessonView() {
   }, [saveProgress]);
 
   // Track time for all content types (videos, PDFs, text, etc.)
+  // Pauses accumulation when the tab/window is hidden
   useEffect(() => {
     if (!lesson?.id || !course?.id || !user?.id) return
     
     let intervalId = null
     let lastSaveTime = Date.now()
+    
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        lastSaveTime = Date.now()
+      } else {
+        const elapsed = Math.floor((Date.now() - lastSaveTime) / 1000)
+        if (elapsed > 0) {
+          saveProgressRef.current(elapsed)
+        }
+      }
+    }
+    
+    document.addEventListener('visibilitychange', onVisibilityChange)
     
     const trackTime = () => {
       if (document.visibilityState === 'visible') {
@@ -1455,6 +1522,7 @@ export default function LessonView() {
     intervalId = setInterval(trackTime, 30000)
     
     return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       if (intervalId) clearInterval(intervalId)
       if (document.visibilityState === 'visible') {
         const finalTime = Math.floor((Date.now() - lastSaveTime) / 1000)
@@ -3268,6 +3336,18 @@ export default function LessonView() {
                   {currentLesson?.module?.title || currentCourse.title}
                 </p>
                 <h1 className="text-2xl font-bold text-text-dark">{currentLesson.title}</h1>
+                <div className="flex items-center gap-3 mt-1.5">
+                  <div className="inline-flex items-center gap-1.5 text-text-light text-xs">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span className="font-mono tabular-nums">{formatElapsedTime(elapsedSeconds)}</span>
+                  </div>
+                  {timeRemainingInfo && !timeRequirementMet && (
+                    <div className="inline-flex items-center gap-1.5 text-warning-default text-xs font-medium">
+                      <span className="font-mono tabular-nums">{formatElapsedTime(timeRemainingInfo.timeRemaining)}</span>
+                      <span>remaining</span>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex-shrink-0 mt-1">
                 {!isCompleted ? (
@@ -3284,11 +3364,24 @@ export default function LessonView() {
             </div>
 
             {timeRemainingInfo && !timeRequirementMet && (
-              <div className="flex items-center gap-2 text-warning-default bg-warning-light px-3 py-2 rounded-lg mt-3">
-                <Clock className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">
-                  {timeRemainingInfo.minutesRemaining} minute{timeRemainingInfo.minutesRemaining !== 1 ? 's' : ''} remaining to meet minimum time
-                </span>
+              <div className="flex items-center justify-between gap-3 bg-warning-light px-3 py-2 rounded-lg mt-3">
+                <div className="flex items-center gap-2 text-warning-default">
+                  <Clock className="w-4 h-4 flex-shrink-0" />
+                  <span className="text-sm">
+                    Review this lesson for at least {timeRemainingInfo.totalMinutesRequired} min before proceeding
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-24 bg-warning-default/20 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-1.5 rounded-full bg-warning-default transition-all duration-1000"
+                      style={{ width: `${Math.min(100, (elapsedSeconds / timeRemainingInfo.timeRequired) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-mono tabular-nums text-warning-default font-medium whitespace-nowrap">
+                    {formatElapsedTime(timeRemainingInfo.timeRemaining)}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -3297,7 +3390,7 @@ export default function LessonView() {
                 {[
                   { id: 'description', label: 'Description' },
                   { id: 'notes', label: 'Notes' },
-                  { id: 'downloads', label: 'Downloads' },
+                  { id: 'resources', label: 'Resources' },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -3382,7 +3475,7 @@ export default function LessonView() {
                 </div>
               )}
 
-              {activeTab === 'downloads' && (
+              {activeTab === 'resources' && (
                 <div className="space-y-3">
                   {(currentLesson.resources && Array.isArray(currentLesson.resources) && currentLesson.resources.length > 0) || currentLesson.content_url ? (
                     <>
@@ -3463,7 +3556,7 @@ export default function LessonView() {
                       ) : null}
                     </>
                   ) : (
-                    <p className="text-sm text-text-light py-4">No downloads available for this lesson.</p>
+                    <p className="text-sm text-text-light py-4">No resources available for this lesson.</p>
                   )}
                 </div>
               )}

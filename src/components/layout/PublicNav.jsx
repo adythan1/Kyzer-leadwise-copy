@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { Menu, X } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import leadwiseLogo from "../../assets/images/leadwise.png";
+import leadwiseLogo from "../../assets/images/leadwise.svg";
 import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import UserMenu from './UserMenu';
 
@@ -34,7 +34,7 @@ const PublicNav = () => {
           <div className="flex items-center space-x-8">
             {/* Logo */}
             <Link to="/" className="flex items-center">
-              <img src={leadwiseLogo} alt="Leadwise Logo" className="h-12" />
+              <img src={leadwiseLogo} alt="Leadwise Logo" className="h-[2rem]" />
             </Link>
 
             {/* Desktop Navigation Links */}

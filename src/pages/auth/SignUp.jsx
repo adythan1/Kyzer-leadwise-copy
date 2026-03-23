@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"; // Add useEffect
 import { useAuth } from "@/hooks/auth/useAuth";
 import SignupForm from "@/components/auth/SignupForm";
 import { Users, User, Building, Check } from "lucide-react";
-import leadwiseLogo from "../../assets/images/leadwise.png";
+import leadwiseLogo from "../../assets/images/leadwise.svg";
 
 export default function Signup() {
   const navigate = useNavigate();

@@ -1,6 +1,6 @@
 // src/components/layout/AuthLayout.jsx
 import { Link } from 'react-router-dom'
-import leadwiseLogo from "../../assets/images/leadwise.png"
+import leadwiseLogo from "../../assets/images/leadwise.svg"
 
 export default function AuthLayout({ children }) {
   return (
@@ -10,7 +10,7 @@ export default function AuthLayout({ children }) {
         {/* Logo */}
         <div className="mb-8">
           <Link to="/" className="flex items-center space-x-3">
-            <img src={leadwiseLogo} alt="Leadwise" className="h-10" />
+            <img src={leadwiseLogo} alt="Leadwise" className="h-[2rem]" />
             <div>
               <h1 className="text-2xl font-bold text-text-dark">Leadwise Academy</h1>
               <p className="text-sm text-text-muted">Learning Management System</p>

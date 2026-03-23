@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/auth/useAuth";
 import LoginForm from "@/components/auth/LoginForm";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
-import leadwiseLogo from "../../assets/images/leadwise.png";
+import leadwiseLogo from "../../assets/images/leadwise.svg";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();

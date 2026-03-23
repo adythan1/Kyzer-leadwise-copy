@@ -25,7 +25,7 @@ import { useCorporate } from "@/hooks/corporate/useCorporate";
 import { useCorporatePermissions } from "@/hooks/corporate/useCorporatePermissions";
 import { useCoursePermissions } from "@/hooks/courses/useCoursePermissions";
 import OrganizationNav from "./OrganizationNav";
-import leadwiseLogo from "../../assets/images/leadwise.png";
+import leadwiseLogo from "../../assets/images/leadwise.svg";
 
 export default function Sidebar({ mobile = false, onClose, collapsed = false, onToggleCollapse }) {
   const { user } = useAuth();

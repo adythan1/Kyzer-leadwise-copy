@@ -1,79 +1,189 @@
-// src/components/dashboard/ProgressChart.jsx
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { TrendingUp, Calendar, BarChart } from "lucide-react";
+import { useAuth } from "@/hooks/auth/useAuth";
+import { supabase } from "@/lib/supabase";
 
-export default function ProgressChart({ data }) {
-  const [timeFrame, setTimeFrame] = useState("7d"); // 7d, 30d, 90d
+export default function ProgressChart() {
+  const { user } = useAuth();
+  const [timeFrame, setTimeFrame] = useState("7d");
+  const [lessonProgress, setLessonProgress] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for demonstration
-  const mockData = {
-    "7d": {
-      labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-      learningHours: [2, 1.5, 3, 0, 2.5, 4, 1],
-      coursesCompleted: [0, 0, 1, 0, 0, 1, 0],
-      totalHours: 14,
-      avgDaily: 2,
-      trend: "+12%",
-    },
-    "30d": {
-      labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
-      learningHours: [14, 18, 12, 16],
-      coursesCompleted: [2, 3, 1, 2],
-      totalHours: 60,
-      avgDaily: 2,
-      trend: "+8%",
-    },
-    "90d": {
-      labels: ["Month 1", "Month 2", "Month 3"],
-      learningHours: [45, 38, 52],
-      coursesCompleted: [4, 3, 5],
-      totalHours: 135,
-      avgDaily: 1.5,
-      trend: "+15%",
-    },
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return;
+      setLoading(true);
+      try {
+        const [progressRes, enrollRes] = await Promise.all([
+          supabase
+            .from("lesson_progress")
+            .select("time_spent_seconds, completed, last_activity_at")
+            .eq("user_id", user.id),
+          supabase
+            .from("course_enrollments")
+            .select("completed_at, status")
+            .eq("user_id", user.id),
+        ]);
 
-  const chartData = data || mockData[timeFrame];
-  console.log("chartData", chartData);
-  
-  // Handle empty data gracefully
-  if (!chartData || !chartData.labels || !Array.isArray(chartData.labels) || chartData.labels.length === 0) {
+        setLessonProgress(progressRes.data || []);
+        setEnrollments(enrollRes.data || []);
+      } catch {
+        setLessonProgress([]);
+        setEnrollments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [user?.id]);
+
+  const chartData = useMemo(() => {
+    const now = new Date();
+
+    if (timeFrame === "7d") {
+      const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const last7 = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (6 - i));
+        return d;
+      });
+
+      const labels = last7.map((d) => weekDays[d.getDay()]);
+      const learningHours = last7.map((date) => {
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        const seconds = lessonProgress
+          .filter((p) => {
+            const a = new Date(p.last_activity_at);
+            return a >= dayStart && a < dayEnd;
+          })
+          .reduce((sum, p) => sum + (p.time_spent_seconds || 0), 0);
+        return Math.round((seconds / 3600) * 10) / 10;
+      });
+      const coursesCompleted = last7.map((date) => {
+        const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+        return enrollments.filter((e) => {
+          if (!e.completed_at) return false;
+          const c = new Date(e.completed_at);
+          return c >= dayStart && c < dayEnd;
+        }).length;
+      });
+      const totalHours = Math.round(learningHours.reduce((a, b) => a + b, 0) * 10) / 10;
+      const avgDaily = Math.round((totalHours / 7) * 10) / 10;
+
+      return { labels, learningHours, coursesCompleted, totalHours, avgDaily };
+    }
+
+    if (timeFrame === "30d") {
+      const labels = ["Week 1", "Week 2", "Week 3", "Week 4"];
+      const weeks = labels.map((_, i) => {
+        const end = new Date(now);
+        end.setDate(end.getDate() - (3 - i) * 7);
+        const start = new Date(end);
+        start.setDate(start.getDate() - 7);
+        return { start, end };
+      });
+
+      const learningHours = weeks.map(({ start, end }) => {
+        const seconds = lessonProgress
+          .filter((p) => {
+            const a = new Date(p.last_activity_at);
+            return a >= start && a < end;
+          })
+          .reduce((sum, p) => sum + (p.time_spent_seconds || 0), 0);
+        return Math.round(seconds / 3600);
+      });
+      const coursesCompleted = weeks.map(({ start, end }) =>
+        enrollments.filter((e) => {
+          if (!e.completed_at) return false;
+          const c = new Date(e.completed_at);
+          return c >= start && c < end;
+        }).length
+      );
+      const totalHours = learningHours.reduce((a, b) => a + b, 0);
+      const avgDaily = Math.round((totalHours / 30) * 10) / 10;
+
+      return { labels, learningHours, coursesCompleted, totalHours, avgDaily };
+    }
+
+    // 90d
+    const labels = ["Month 1", "Month 2", "Month 3"];
+    const months = labels.map((_, i) => {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - (2 - i));
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return { start, end };
+    });
+
+    const learningHours = months.map(({ start, end }) => {
+      const seconds = lessonProgress
+        .filter((p) => {
+          const a = new Date(p.last_activity_at);
+          return a >= start && a <= end;
+        })
+        .reduce((sum, p) => sum + (p.time_spent_seconds || 0), 0);
+      return Math.round(seconds / 3600);
+    });
+    const coursesCompleted = months.map(({ start, end }) =>
+      enrollments.filter((e) => {
+        if (!e.completed_at) return false;
+        const c = new Date(e.completed_at);
+        return c >= start && c <= end;
+      }).length
+    );
+    const totalHours = learningHours.reduce((a, b) => a + b, 0);
+    const avgDaily = Math.round((totalHours / 90) * 10) / 10;
+
+    return { labels, learningHours, coursesCompleted, totalHours, avgDaily };
+  }, [timeFrame, lessonProgress, enrollments]);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-4 bg-background-medium rounded w-1/3"></div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-16 bg-background-medium rounded"></div>
+            <div className="h-16 bg-background-medium rounded"></div>
+            <div className="h-16 bg-background-medium rounded"></div>
+          </div>
+          <div className="h-40 bg-background-medium rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chartData.labels.length || chartData.totalHours === 0) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-text-dark">
-              Learning Progress
-            </h3>
-            <p className="text-sm text-text-light">
-              Track your learning activity over time
-            </p>
+            <h3 className="text-lg font-semibold text-text-dark">Learning Progress</h3>
+            <p className="text-sm text-text-light">Track your learning activity over time</p>
           </div>
         </div>
-        
         <div className="bg-background-light rounded-lg p-8 text-center">
-          <div className="text-text-light text-lg mb-2">No learning data available</div>
+          <div className="text-text-light text-lg mb-2">No learning data available yet</div>
           <div className="text-text-light text-sm">Start learning to see your progress here</div>
         </div>
       </div>
     );
   }
-  
-  const maxHours = Math.max(...(chartData?.learningHours || [0]));
+
+  const maxHours = Math.max(...chartData.learningHours, 1);
 
   return (
     <div className="space-y-6">
-      {/* Header with Time Frame Selector */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-text-dark">
-            Learning Progress
-          </h3>
-          <p className="text-sm text-text-light">
-            Track your learning activity over time
-          </p>
+          <h3 className="text-lg font-semibold text-text-dark">Learning Progress</h3>
+          <p className="text-sm text-text-light">Track your learning activity over time</p>
         </div>
-
         <div className="flex items-center space-x-2">
           {["7d", "30d", "90d"].map((period) => (
             <button
@@ -85,95 +195,63 @@ export default function ProgressChart({ data }) {
                   : "bg-background-medium text-text-light hover:bg-background-dark"
               }`}
             >
-              {period === "7d"
-                ? "Week"
-                : period === "30d"
-                  ? "Month"
-                  : "Quarter"}
+              {period === "7d" ? "Week" : period === "30d" ? "Month" : "Quarter"}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Stats Summary */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-background-light rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-1">
             <Calendar className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-medium text-text-light">
-              Total Hours
-            </span>
+            <span className="text-xs font-medium text-text-light">Total Hours</span>
           </div>
-          <p className="text-lg font-bold text-text-dark">
-            {chartData.totalHours}h
-          </p>
+          <p className="text-lg font-bold text-text-dark">{chartData.totalHours}h</p>
         </div>
-
         <div className="bg-background-light rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-1">
             <BarChart className="w-4 h-4 text-green-500" />
-            <span className="text-xs font-medium text-text-light">
-              Daily Avg
-            </span>
+            <span className="text-xs font-medium text-text-light">Daily Avg</span>
           </div>
-          <p className="text-lg font-bold text-text-dark">
-            {chartData.avgDaily}h
-          </p>
+          <p className="text-lg font-bold text-text-dark">{chartData.avgDaily}h</p>
         </div>
-
         <div className="bg-background-light rounded-lg p-4">
           <div className="flex items-center space-x-2 mb-1">
             <TrendingUp className="w-4 h-4 text-purple-500" />
-            <span className="text-xs font-medium text-text-light">Growth</span>
+            <span className="text-xs font-medium text-text-light">Completed</span>
           </div>
-          <p className="text-lg font-bold text-green-600">{chartData.trend}</p>
+          <p className="text-lg font-bold text-text-dark">
+            {chartData.coursesCompleted.reduce((a, b) => a + b, 0)}
+          </p>
         </div>
       </div>
 
-      {/* Chart */}
       <div className="relative">
         <div className="flex items-end justify-between space-x-2 h-40 px-2">
-          {chartData.labels && chartData.learningHours && chartData.coursesCompleted && 
-           chartData.labels.map((label, index) => {
+          {chartData.labels.map((label, index) => {
             const hours = chartData.learningHours[index] || 0;
             const completed = chartData.coursesCompleted[index] || 0;
-            const heightPercentage =
-              maxHours > 0 ? (hours / maxHours) * 100 : 0;
+            const heightPercentage = maxHours > 0 ? (hours / maxHours) * 100 : 0;
 
             return (
               <div key={index} className="flex-1 flex flex-col items-center">
                 <div className="w-full flex flex-col justify-end h-32 mb-2">
-                  {/* Learning Hours Bar */}
                   <div
                     className="w-full bg-primary rounded-t-sm transition-all duration-300 hover:bg-primary-dark cursor-pointer group relative"
-                    style={{
-                      height: `${heightPercentage}%`,
-                      minHeight: hours > 0 ? "4px" : "0",
-                    }}
+                    style={{ height: `${heightPercentage}%`, minHeight: hours > 0 ? "4px" : "0" }}
                   >
-                    {/* Tooltip */}
-                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-text-dark text-white text-xs rounded whitespace-nowrap transition-opacity">
-                      {hours}h learning
-                      {completed > 0 && `, ${completed} completed`}
+                    <div className="opacity-0 group-hover:opacity-100 absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-text-dark text-white text-xs rounded whitespace-nowrap transition-opacity z-10">
+                      {hours}h learning{completed > 0 && `, ${completed} completed`}
                     </div>
                   </div>
-
-                  {/* Completed Courses Indicator */}
-                  {completed > 0 && (
-                    <div className="w-full h-1 bg-green-500 rounded-b-sm"></div>
-                  )}
+                  {completed > 0 && <div className="w-full h-1 bg-green-500 rounded-b-sm"></div>}
                 </div>
-
-                {/* Label */}
-                <span className="text-xs text-text-light font-medium">
-                  {label}
-                </span>
+                <span className="text-xs text-text-light font-medium">{label}</span>
               </div>
             );
           })}
         </div>
-
-        {/* Y-axis labels */}
         <div className="absolute left-0 top-0 h-32 flex flex-col justify-between text-xs text-text-light">
           <span>{maxHours}h</span>
           <span>{Math.round(maxHours / 2)}h</span>
@@ -181,7 +259,6 @@ export default function ProgressChart({ data }) {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex items-center justify-center space-x-6 text-xs">
         <div className="flex items-center space-x-2">
           <div className="w-3 h-3 bg-primary rounded"></div>
@@ -192,27 +269,6 @@ export default function ProgressChart({ data }) {
           <span className="text-text-light">Courses Completed</span>
         </div>
       </div>
-
-      {/* Insights */}
-      {chartData.totalHours && chartData.totalHours > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-blue-900 mb-1">
-                Learning Insights
-              </h4>
-              <p className="text-xs text-blue-700">
-                {chartData.trend && chartData.trend.startsWith("+")
-                  ? `Great progress! You're learning ${chartData.trend} more than last period. Keep up the momentum!`
-                  : `You've been consistent with your learning. Try to increase your daily study time to accelerate progress.`}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

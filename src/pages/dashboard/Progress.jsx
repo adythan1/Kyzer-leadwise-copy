@@ -331,7 +331,7 @@ export default function Progress() {
                 <span>Last 30 days</span>
               </div>
             </div>
-            <ProgressChart data={enrolledCourses} />
+            <ProgressChart />
           </Card>
 
           {/* Course Progress */}

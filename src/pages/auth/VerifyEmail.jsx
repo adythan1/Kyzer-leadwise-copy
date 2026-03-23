@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { Mail, RefreshCw, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
-import leadwiseLogo from "../../assets/images/leadwise.png";
+import leadwiseLogo from "../../assets/images/leadwise.svg";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
