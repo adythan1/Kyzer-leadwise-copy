@@ -1,32 +1,68 @@
 // src/pages/dashboard/Certificates.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { 
-  Award, 
-  Download, 
-  Share2, 
-  Calendar, 
-  BookOpen,
-  Star,
-  ExternalLink,
-  Filter,
-  Search
-} from 'lucide-react';
+import { Award, BookOpen, Calendar, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import CertificatePreviewModal from '@/components/course/CertificatePreviewModal';
+import CertificateGalleryCard from '@/components/dashboard/CertificateGalleryCard';
+
+function getCertificateDisplayStatus(certificate) {
+  if (certificate.status) return certificate.status;
+  if (certificate.issued_at) return 'completed';
+  return 'pending';
+}
+
+function getCourseTitle(certificate) {
+  return (
+    certificate.course?.title ||
+    certificate.certificate_data?.course_title ||
+    certificate.course_name ||
+    certificate.course_title ||
+    'Course'
+  );
+}
+
+function getRecipientName(certificate, profile, user) {
+  const fromCert = certificate.certificate_data?.user_name?.trim();
+  if (fromCert) return fromCert;
+  const parts = [profile?.first_name, profile?.last_name].filter(Boolean);
+  if (parts.length) return parts.join(' ');
+  if (user?.user_metadata?.full_name?.trim()) return user.user_metadata.full_name.trim();
+  if (user?.email) return user.email;
+  return 'Learner';
+}
+
+function formatIssuedLabel(certificate) {
+  const raw = certificate.issued_at || certificate.completed_at;
+  if (!raw) return null;
+  try {
+    return `Issued ${new Date(raw).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })}`;
+  } catch {
+    return null;
+  }
+}
 
 export default function Certificates() {
-  const { user } = useAuth();
-  // Store selectors - individual to prevent infinite loops
-  const certificates = useCourseStore(state => state.certificates);
-  const fetchCertificates = useCourseStore(state => state.actions.fetchCertificates);
-  
+  const { user, profile } = useAuth();
+  const certificates = useCourseStore((state) => state.certificates);
+  const fetchCertificates = useCourseStore((state) => state.actions.fetchCertificates);
+
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filteredCertificates, setFilteredCertificates] = useState([]);
+  const [preview, setPreview] = useState({
+    open: false,
+    courseId: null,
+    courseName: '',
+  });
 
   useEffect(() => {
     const loadCertificates = async () => {
@@ -47,81 +83,72 @@ export default function Certificates() {
   useEffect(() => {
     let filtered = certificates;
 
-    // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(cert => 
-        cert.course_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cert.course_title?.toLowerCase().includes(searchTerm.toLowerCase())
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (cert) =>
+          getCourseTitle(cert).toLowerCase().includes(q) ||
+          cert.course?.description?.toLowerCase().includes(q)
       );
     }
 
-    // Apply status filter
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(cert => cert.status === filterStatus);
+      filtered = filtered.filter((cert) => getCertificateDisplayStatus(cert) === filterStatus);
     }
 
     setFilteredCertificates(filtered);
   }, [certificates, searchTerm, filterStatus]);
 
-  const handleDownload = async (certificate) => {
-    try {
-      const generateCertificatePreview = useCourseStore.getState().actions.generateCertificatePreview;
-      const { blob, filename } = await generateCertificatePreview(certificate.id);
-
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      // Fallback to basic download if template generation fails
-      console.log('Downloading certificate:', certificate.id);
+  const openPreview = useCallback((certificate) => {
+    const courseId = certificate.course_id || certificate.course?.id;
+    const courseName = getCourseTitle(certificate);
+    if (!courseId) {
+      toast.error('Course information is missing for this certificate.');
+      return;
     }
-  };
+    setPreview({ open: true, courseId, courseName });
+  }, []);
 
-  const handleShare = (certificate) => {
-    // Mock share functionality
-    if (navigator.share) {
-      navigator.share({
-        title: `${certificate.course_name} Certificate`,
-        text: `I completed ${certificate.course_name} on Leadwise Academy!`,
-        url: window.location.href
-      });
-    } else {
-      // Fallback to copying to clipboard
-      navigator.clipboard.writeText(`${certificate.course_name} Certificate - ${window.location.href}`);
-    }
-  };
+  const closePreview = useCallback(() => {
+    setPreview((prev) => ({ ...prev, open: false }));
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed':
-        return 'bg-success-light text-success-default';
+        return 'bg-emerald-50 text-emerald-800';
       case 'pending':
-        return 'bg-warning-light text-warning-default';
+        return 'bg-amber-50 text-amber-900';
       case 'expired':
-        return 'bg-error-light text-error-default';
+        return 'bg-red-50 text-red-800';
       default:
         return 'bg-gray-100 text-gray-700';
     }
   };
 
+  const latestIssuedLabel = useMemo(() => {
+    if (!certificates.length) return null;
+    const sorted = [...certificates].sort(
+      (a, b) => new Date(b.issued_at || 0) - new Date(a.issued_at || 0)
+    );
+    return formatIssuedLabel(sorted[0]);
+  }, [certificates]);
+
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+      <div className="space-y-8 bg-background-light -mx-4 px-4 py-6 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
+        <div className="animate-pulse space-y-4">
+          <div className="h-9 bg-gray-200 rounded w-40" />
+          <div className="h-4 bg-gray-200 rounded w-2/3 max-w-md" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-64 bg-gray-200 rounded"></div>
+        <div className="flex flex-wrap gap-8 justify-center lg:justify-start">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="w-full max-w-[340px] animate-pulse"
+            >
+              <div className="h-[240px] bg-[#0C1C4F]/30 rounded-sm" />
+              <div className="h-12 bg-[#1565FF]/40 rounded-b-md mt-0.5" />
             </div>
           ))}
         </div>
@@ -130,172 +157,119 @@ export default function Certificates() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-dark mb-2">Certificates</h1>
-        <p className="text-text-light">
+    <div className="space-y-8 bg-background-light -mx-4 px-4 py-6 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
+      <CertificatePreviewModal
+        courseId={preview.courseId}
+        courseName={preview.courseName}
+        userId={user?.id}
+        isOpen={preview.open}
+        onClose={closePreview}
+      />
+
+      <header className="space-y-1">
+        <h1 className="relative inline-block text-2xl font-bold text-text-dark pb-3">
+          Certificates
+          <span
+            className="absolute bottom-0 left-0 h-1 w-14 rounded-full bg-[#1565FF]"
+            aria-hidden
+          />
+        </h1>
+        <p className="text-text-light text-sm sm:text-base pt-1">
           Your achievements and completed courses
         </p>
-      </div>
+      </header>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+        <Card className="p-5 border-border shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-success-light rounded-lg flex items-center justify-center">
-              <Award className="w-6 h-6 text-success-default" />
+            <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <Award className="w-6 h-6 text-emerald-700" />
             </div>
             <div>
-              <p className="text-sm text-text-light">Total Certificates</p>
+              <p className="text-sm text-text-light">Total certificates</p>
               <p className="text-2xl font-bold text-text-dark">{certificates.length}</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="p-5 border-border shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-default" />
+            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-[#1565FF]" />
             </div>
             <div>
-              <p className="text-sm text-text-light">Completed Courses</p>
-              <p className="text-2xl font-bold text-text-dark">
-                {certificates.filter(c => c.status === 'completed').length}
+              <p className="text-sm text-text-light">Most recent</p>
+              <p className="text-base font-semibold text-text-dark">
+                {latestIssuedLabel || '—'}
               </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-warning-light rounded-lg flex items-center justify-center">
-              <Star className="w-6 h-6 text-warning-default" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Average Rating</p>
-              <p className="text-2xl font-bold text-text-dark">4.8</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Filters and Search */}
-      <Card className="p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <Card className="p-4 sm:p-5 border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-muted" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
             <input
-              type="text"
-              placeholder="Search certificates..."
+              type="search"
+              placeholder="Search by course name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-default focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-[#1565FF]/30 focus:border-[#1565FF]"
             />
           </div>
-          
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary-default focus:border-transparent"
-            >
-              <option value="all">All Status</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
-              <option value="expired">Expired</option>
-            </select>
-            
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              More Filters
-            </Button>
-          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2.5 border border-border rounded-lg text-sm bg-background-white focus:ring-2 focus:ring-[#1565FF]/30 focus:border-[#1565FF]"
+          >
+            <option value="all">All statuses</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="expired">Expired</option>
+          </select>
         </div>
       </Card>
 
-      {/* Certificates Grid */}
       {filteredCertificates.length === 0 ? (
-        <Card className="p-12 text-center">
+        <Card className="p-12 text-center border-border shadow-sm">
           <Award className="w-16 h-16 text-text-muted mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-text-dark mb-2">No Certificates Found</h3>
-          <p className="text-text-light mb-6">
-            {searchTerm || filterStatus !== 'all' 
-              ? 'Try adjusting your search or filters'
-              : 'Complete courses to earn your first certificate'
-            }
+          <h3 className="text-xl font-semibold text-text-dark mb-2">No certificates found</h3>
+          <p className="text-text-light mb-6 max-w-md mx-auto">
+            {searchTerm || filterStatus !== 'all'
+              ? 'Try adjusting your search or filters.'
+              : 'Complete a course to earn your first certificate.'}
           </p>
           {!searchTerm && filterStatus === 'all' && (
-            <Button>
-              <Link to="/app/courses">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Browse Courses
-              </Link>
-            </Button>
+            <Link
+              to="/app/courses"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1565FF] text-white font-semibold px-5 py-2.5 text-sm hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565FF]"
+            >
+              <BookOpen className="w-4 h-4" />
+              Browse courses
+            </Link>
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCertificates.map((certificate) => (
-            <Card key={certificate.id} className="p-6 hover:shadow-lg transition-shadow">
-              {/* Certificate Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center">
-                  <Award className="w-6 h-6 text-primary-default" />
-                </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(certificate.status)}`}>
-                  {certificate.status}
-                </span>
-              </div>
-
-              {/* Course Info */}
-              <h3 className="font-semibold text-text-dark mb-2 line-clamp-2">
-                {certificate.course_name || certificate.course_title}
-              </h3>
-              
-              <p className="text-sm text-text-light mb-4 line-clamp-2">
-                {certificate.description || 'Course completion certificate'}
-              </p>
-
-              {/* Completion Details */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-text-muted">
-                  <Calendar className="w-4 h-4" />
-                  <span>Completed: {new Date(certificate.completed_at || Date.now()).toLocaleDateString()}</span>
-                </div>
-                
-                {certificate.score && (
-                  <div className="flex items-center gap-2 text-sm text-text-muted">
-                    <Star className="w-4 h-4" />
-                    <span>Score: {certificate.score}%</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={() => handleDownload(certificate)}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => handleShare(certificate)}
-                >
-                  <Share2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+        <div className="flex flex-wrap gap-8 justify-center lg:justify-start pb-4">
+          {filteredCertificates.map((certificate) => {
+            const displayStatus = getCertificateDisplayStatus(certificate);
+            const showStatusChip = displayStatus !== 'completed';
+            return (
+              <CertificateGalleryCard
+                key={certificate.id}
+                courseTitle={getCourseTitle(certificate)}
+                recipientName={getRecipientName(certificate, profile, user)}
+                issuedLabel={formatIssuedLabel(certificate)}
+                status={showStatusChip ? displayStatus : null}
+                statusClassName={getStatusColor(displayStatus)}
+                onViewFull={() => openPreview(certificate)}
+              />
+            );
+          })}
         </div>
       )}
     </div>
   );
-} 
+}
