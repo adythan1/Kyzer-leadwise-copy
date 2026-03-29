@@ -47,7 +47,32 @@ export default {
       },
       maxWidth: {
         '8xl': '100%', // 88rem - for wide content areas like course management
-      }
+      },
+      keyframes: {
+        'home-fade-up': {
+          from: {
+            opacity: '0',
+            transform: 'translateY(1rem)',
+          },
+          to: {
+            opacity: '1',
+            transform: 'translateY(0)',
+          },
+        },
+        'home-accent': {
+          from: { transform: 'scaleX(0)' },
+          to: { transform: 'scaleX(1)' },
+        },
+        'home-float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-0.65rem)' },
+        },
+      },
+      animation: {
+        'home-fade-up': 'home-fade-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'home-accent': 'home-accent 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards',
+        'home-float': 'home-float 6s ease-in-out infinite',
+      },
     },
   },
   plugins: [

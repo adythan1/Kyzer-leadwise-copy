@@ -38,6 +38,7 @@ const SIZES = {
  * @param {string} [props.className] — on <header>
  * @param {string} [props.titleClassName] — extra classes on the heading
  * @param {string} [props.subtitleWrapperClassName] — override default subtitle wrapper classes
+ * @param {string} [props.accentClassName] — extra classes on the orange accent bar
  */
 export default function PageTitle({
   title,
@@ -49,6 +50,7 @@ export default function PageTitle({
   className = '',
   titleClassName = '',
   subtitleWrapperClassName,
+  accentClassName = '',
 }) {
   const s = SIZES[size] || SIZES.default;
   const subtitleWrap =
@@ -72,7 +74,7 @@ export default function PageTitle({
         >
           {title}
           <span
-            className={`absolute bottom-0 left-0 ${s.accent}`}
+            className={`absolute bottom-0 left-0 origin-left ${s.accent} ${accentClassName}`.trim()}
             style={{ backgroundColor: LEADWISE_BRAND_ORANGE }}
             aria-hidden
           />

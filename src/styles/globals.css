@@ -118,6 +118,29 @@ body {
     box-shadow: 0 0 0 3px var(--color-primary);
     opacity: 0.2;
   }
+
+  /* Scroll-driven section reveals (e.g. Home); pair with ScrollReveal.jsx */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translate3d(0, 1.75rem, 0);
+    transition:
+      opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .scroll-reveal-is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-reveal,
+    .scroll-reveal-is-visible {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
 }
 
 /* Component Styles */
