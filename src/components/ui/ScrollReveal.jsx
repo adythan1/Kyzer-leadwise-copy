@@ -3,8 +3,8 @@ import { useRef, useEffect, useState } from 'react';
 import clsx from 'clsx';
 
 /**
- * Fades and rises content into view when it enters the viewport (scroll-driven, one shot).
- * Respects prefers-reduced-motion via CSS.
+ * Fades content upward into view when it enters the viewport (scroll-driven, one shot).
+ * Uses theme animation `animate-home-fade-up` (same easing as the Home hero). Respects reduced motion.
  *
  * @param {Object} props
  * @param {import('react').ReactNode} props.children
@@ -60,8 +60,9 @@ export default function ScrollReveal({
     <div
       ref={ref}
       className={clsx(
-        'scroll-reveal',
-        visible && 'scroll-reveal-is-visible',
+        !visible && 'opacity-0',
+        visible &&
+          'animate-home-fade-up motion-reduce:animate-none motion-reduce:opacity-100 motion-reduce:translate-y-0',
         className,
       )}
     >
