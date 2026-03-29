@@ -1,5 +1,5 @@
 // src/pages/courses/CourseManagement.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment } from 'react';
 import { Link } from 'react-router-dom';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -12,20 +12,16 @@ import {
   Eye,
   EyeOff,
   BookOpen,
-  Play,
   Settings,
   Users,
   Clock,
-  Star,
-  ChevronDown,
-  ChevronRight,
   FolderOpen,
-  FileText,
   Search,
   Filter,
-  Edit3,
   Paperclip,
-  Gift
+  Gift,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -38,6 +34,7 @@ import QuizForm from '@/components/course/QuizForm';
 import ResourcesQuickEditModal from '@/components/course/ResourcesQuickEditModal';
 import { useToast } from '@/components/ui';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import CourseStructurePanel from '@/components/course/CourseStructurePanel';
 
 export default function CourseManagement() {
   const { user } = useAuth();
@@ -80,6 +77,26 @@ export default function CourseManagement() {
   const [expandedModules, setExpandedModules] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [coursesViewMode, setCoursesViewMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem('courseManagementView');
+      if (stored === 'gallery' || stored === 'list') return stored;
+    } catch {
+      /* ignore */
+    }
+    return 'list';
+  });
+
+  const setCoursesViewModePersisted = useCallback((mode) => {
+    setCoursesViewMode(mode);
+    try {
+      localStorage.setItem('courseManagementView', mode);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const [structurePanelCourseId, setStructurePanelCourseId] = useState(null);
+  const [structurePanelLoading, setStructurePanelLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, courseId: null, courseTitle: '' });
   const [confirmDeleteModule, setConfirmDeleteModule] = useState({ open: false, moduleId: null, courseId: null, moduleTitle: '' });
   const [isDeletingCourse, setIsDeletingCourse] = useState(false);
@@ -196,6 +213,7 @@ export default function CourseManagement() {
       const result = await deleteCourse(courseId);
       if (result.success) {
         success('Course deleted successfully!');
+        setStructurePanelCourseId((prev) => (prev === courseId ? null : prev));
         // Refresh courses list after deletion
         await fetchCourses();
         setConfirmDelete({ open: false, courseId: null, courseTitle: '' });
@@ -420,31 +438,50 @@ export default function CourseManagement() {
     }
   };
 
-  const toggleLessonsView = (courseId) => {
-    if (courseLessons[courseId]) {
-      // Hide structure - clear all related data
-      setCourseLessons(prev => {
-        const newState = { ...prev };
-        delete newState[courseId];
-        return newState;
-      });
-      setCourseModules(prev => {
-        const newState = { ...prev };
-        delete newState[courseId];
-        return newState;
-      });
-      setCourseQuizzes(prev => {
-        const newState = { ...prev };
-        delete newState[courseId];
-        return newState;
-      });
-    } else {
-      // Show structure - load all related data
-      loadCourseLessons(courseId);
-      loadCourseModules(courseId);
-      loadCourseQuizzes(courseId);
-    }
-  };
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
+      const matchesSearch =
+        course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter =
+        filterStatus === 'all' ||
+        (filterStatus === 'published' && course.is_published) ||
+        (filterStatus === 'draft' && !course.is_published) ||
+        (filterStatus === 'free_trial' && course.is_free_trial);
+      return matchesSearch && matchesFilter;
+    });
+  }, [courses, searchTerm, filterStatus]);
+
+  const closeCourseStructurePanel = useCallback(() => {
+    setStructurePanelCourseId(null);
+  }, []);
+
+  const toggleCourseStructurePanel = useCallback(
+    async (courseId) => {
+      if (structurePanelCourseId === courseId) {
+        closeCourseStructurePanel();
+        return;
+      }
+      setStructurePanelCourseId(courseId);
+      setStructurePanelLoading(true);
+      try {
+        await Promise.all([
+          loadCourseLessons(courseId),
+          loadCourseModules(courseId),
+          loadCourseQuizzes(courseId),
+        ]);
+      } finally {
+        setStructurePanelLoading(false);
+      }
+    },
+    [
+      structurePanelCourseId,
+      closeCourseStructurePanel,
+      loadCourseLessons,
+      loadCourseModules,
+      loadCourseQuizzes,
+    ],
+  );
 
   if (loading.courses) {
     return (
@@ -648,7 +685,39 @@ export default function CourseManagement() {
             />
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              className="inline-flex rounded-lg border border-gray-300 bg-gray-50 p-0.5"
+              role="group"
+              aria-label="Course layout"
+            >
+              <button
+                type="button"
+                onClick={() => setCoursesViewModePersisted('list')}
+                className={`rounded-md p-2 transition-colors ${
+                  coursesViewMode === 'list'
+                    ? 'bg-white text-primary-default shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                title="List view"
+                aria-pressed={coursesViewMode === 'list'}
+              >
+                <List className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCoursesViewModePersisted('gallery')}
+                className={`rounded-md p-2 transition-colors ${
+                  coursesViewMode === 'gallery'
+                    ? 'bg-white text-primary-default shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                title="Gallery view"
+                aria-pressed={coursesViewMode === 'gallery'}
+              >
+                <LayoutGrid className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -748,9 +817,15 @@ export default function CourseManagement() {
       )}
 
       {/* Courses List */}
-      <div className="space-y-4">
+      <div
+        className={
+          coursesViewMode === 'gallery'
+            ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3'
+            : 'space-y-4'
+        }
+      >
         {courses.length === 0 ? (
-          <Card className="p-12 text-center">
+          <Card className="col-span-full p-12 text-center">
             <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               No courses yet
@@ -763,26 +838,193 @@ export default function CourseManagement() {
               Create Course
             </Button>
           </Card>
+        ) : filteredCourses.length === 0 ? (
+          <Card className="col-span-full p-12 text-center">
+            <Filter className="mx-auto mb-4 h-12 w-12 text-gray-400" aria-hidden />
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">No courses match</h3>
+            <p className="text-gray-600">Try adjusting your search or filters.</p>
+          </Card>
         ) : (
-          courses
-            .filter(course => {
-              // Search filter
-              const matchesSearch = course.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                   course.description?.toLowerCase().includes(searchTerm.toLowerCase());
-              
-              // Status filter
-              const matchesFilter = filterStatus === 'all' || 
-                                   (filterStatus === 'published' && course.is_published) ||
-                                   (filterStatus === 'draft' && !course.is_published) ||
-                                   (filterStatus === 'free_trial' && course.is_free_trial);
-              
-              return matchesSearch && matchesFilter;
-            })
-            .map(course => (
-            <Card key={course.id} className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
+          filteredCourses.map((course) => {
+            const canManage = canManageThisCourse(user, course);
+            const canPublish = hasPermission(user, PERMISSIONS.PUBLISH_COURSES);
+            const canEdit = hasPermission(user, PERMISSIONS.EDIT_COURSES);
+            const canDelete = hasPermission(user, PERMISSIONS.DELETE_COURSES);
+            const canManageResources = hasPermission(user, PERMISSIONS.MANAGE_RESOURCES);
+
+            const courseActions = (
+              <div
+                className={
+                  coursesViewMode === 'gallery'
+                    ? 'mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3'
+                    : 'ml-4 flex shrink-0 flex-wrap items-center gap-2'
+                }
+              >
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => toggleCourseStructurePanel(course.id)}
+                >
+                  {structurePanelCourseId === course.id ? 'Close structure' : 'Course structure'}
+                </Button>
+                {canManage && (
+                  <>
+                    {canPublish && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleTogglePublish(course.id, course.status)}
+                        title={course.status === 'published' ? 'Unpublish course' : 'Publish course'}
+                      >
+                        {course.status === 'published' ? (
+                          <>
+                            <EyeOff className="mr-1 h-4 w-4" />
+                            Unpublish
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="mr-1 h-4 w-4" />
+                            Publish
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleEditCourse(course)}
+                        title="Edit course details"
+                      >
+                        <Edit className="mr-1 h-4 w-4" />
+                        Edit
+                      </Button>
+                    )}
+                    {canManageResources && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleManageResources(course)}
+                        title="Manage course resources and attachments"
+                      >
+                        <Paperclip className="mr-1 h-4 w-4" />
+                        Resources
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (course?.id) {
+                            handleDeleteCourse(course.id);
+                          } else {
+                            showError('Unable to delete: Course ID not found');
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700"
+                        title="Delete Course"
+                        aria-label="Delete Course"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+
+            return (
+            <Fragment key={course.id}>
+            <Card
+              className={
+                coursesViewMode === 'gallery'
+                  ? 'flex h-full flex-col p-4'
+                  : 'p-6'
+              }
+            >
+              {coursesViewMode === 'gallery' ? (
+                <>
+                  <div className="mb-3 aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
+                    {course.thumbnail_url ? (
+                      <img
+                        src={course.thumbnail_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-gray-400">
+                        <BookOpen className="h-12 w-12" aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    <h3 className="mb-2 line-clamp-2 text-base font-semibold text-gray-900">
+                      {course.title}
+                    </h3>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          course.status === 'published'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+                        {course.status}
+                      </span>
+                      {course.is_published && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          Published
+                        </span>
+                      )}
+                      {course.is_free_trial && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          Free Trial
+                        </span>
+                      )}
+                    </div>
+                    {course.description ? (
+                      <p className="mb-3 line-clamp-2 text-sm text-gray-600">{course.description}</p>
+                    ) : null}
+                    <div className="mb-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                        <span>{course.duration_minutes || 0} min</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {countsMap[course.id]?.lessons ?? (courseLessons[course.id]?.length || 0)} lessons
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                        <span>
+                          {countsMap[course.id]?.modules ?? (courseModules[course.id]?.length || 0)} modules
+                        </span>
+                      </div>
+                      {course.category && (
+                        <span
+                          className="rounded px-2 py-0.5 text-xs font-medium"
+                          style={{
+                            backgroundColor: course.category.color ? `${course.category.color}20` : '#f3f4f6',
+                            color: course.category.color || '#374151',
+                          }}
+                        >
+                          {course.category.name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {courseActions}
+                </>
+              ) : (
+              <div className="mb-6 flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="mb-2 flex flex-wrap items-center gap-3">
                     <h3 className="text-xl font-semibold text-gray-900">
                       {course.title}
                     </h3>
@@ -844,379 +1086,38 @@ export default function CourseManagement() {
                     )}
                   </div>
                 </div>
-                
-                {(() => {
-                  const canManage = canManageThisCourse(user, course);
-                  const canPublish = hasPermission(user, PERMISSIONS.PUBLISH_COURSES);
-                  const canEdit = hasPermission(user, PERMISSIONS.EDIT_COURSES);
-                  const canDelete = hasPermission(user, PERMISSIONS.DELETE_COURSES);
-                  const canManageResources = hasPermission(user, PERMISSIONS.MANAGE_RESOURCES);
-
-                  return (
-                <div className="flex items-center gap-2 ml-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => toggleLessonsView(course.id)}
-                  >
-                    {courseLessons[course.id] ? 'Hide' : 'Show'} Structure
-                  </Button>
-                  {canManage && (
-                    <>
-                      {canPublish && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleTogglePublish(course.id, course.status)}
-                          title={course.status === 'published' ? 'Unpublish course' : 'Publish course'}
-                        >
-                          {course.status === 'published' ? (
-                            <>
-                              <EyeOff className="w-4 h-4 mr-1" />
-                              Unpublish
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-4 h-4 mr-1" />
-                              Publish
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      {canEdit && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleEditCourse(course)}
-                          title="Edit course details"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit
-                        </Button>
-                      )}
-                      {/* <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleAddModule(course.id)}
-                      >
-                        <FolderOpen className="w-4 h-4 mr-1" />
-                        Add Module
-                      </Button> */}
-                      {/* <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleAddLesson(course.id)}
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Lesson
-                      </Button> */}
-                      {canManageResources && (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleManageResources(course)}
-                          title="Manage course resources and attachments"
-                        >
-                          <Paperclip className="w-4 h-4 mr-1" />
-                          Resources
-                        </Button>
-                      )}
-                      {canDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (course?.id) {
-                              handleDeleteCourse(course.id);
-                            } else {
-                              showError('Unable to delete: Course ID not found');
-                            }
-                          }}
-                          className="text-red-600 hover:text-red-700"
-                          title="Delete Course"
-                          aria-label="Delete Course"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-                ); })()}
+                {courseActions}
               </div>
-
-              {/* Course Structure Section */}
-              {(courseModules[course.id] || courseLessons[course.id] || courseQuizzes[course.id]) && (
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-900">Course Structure</h4>
-                    {course.created_by === user?.id && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleAddModule(course.id)}
-                        >
-                          <FolderOpen className="w-4 h-4 mr-2" />
-                          Add Module
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleAddLesson(course.id)}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Lesson
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleAddQuiz(course.id)}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Quiz
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {/* Display Modules with Lessons */}
-                    {courseModules[course.id]?.map(module => (
-                      <div key={module.id} className="border border-gray-200 rounded-lg">
-                        <div 
-                          className="flex items-center justify-between p-3 bg-gray-50 cursor-pointer hover:bg-gray-100"
-                          onClick={() => toggleModuleExpansion(module.id)}
-                        >
-                          <div className="flex items-center gap-3">
-                            {expandedModules[module.id] ? (
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            ) : (
-                              <ChevronRight className="w-4 h-4 text-gray-500" />
-                            )}
-                            <FolderOpen className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <h5 className="font-medium text-gray-900">
-                                {module.title}
-                              </h5>
-                              <p className="text-sm text-gray-500">
-                                {module.estimated_duration ? `${module.estimated_duration} min` : 'No duration set'}
-                                {module.is_required && ' • Required'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {course.created_by === user?.id && (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditModule(module, course.id);
-                                }}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteModule(module.id, course.id, module.title);
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Module Lessons */}
-                        {expandedModules[module.id] && (
-                          <div className="p-3 bg-white">
-                            {courseLessons[course.id]?.filter(lesson => lesson.module_id === module.id).length > 0 ? (
-                              <div className="space-y-2">
-                                {courseLessons[course.id]
-                                  ?.filter(lesson => lesson.module_id === module.id)
-                                  .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-                                  .map(lesson => (
-                                    <div
-                                      key={lesson.id}
-                                      className="flex items-center justify-between p-2 bg-gray-50 rounded border-l-4 border-blue-200"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        {lesson.content_type === 'presentation' ? (
-                                          <Settings className="w-4 h-4 text-blue-500" />
-                                        ) : (
-                                          <FileText className="w-4 h-4 text-gray-500" />
-                                        )}
-                                        <span className="text-sm font-medium text-gray-500">
-                                          {lesson.order_index || '?'}.
-                                        </span>
-                                        <div>
-                                          <h6 className="font-medium text-gray-900">
-                                            {lesson.title || 'Untitled Lesson'}
-                                          </h6>
-                                          <p className="text-xs text-gray-500">
-                                            {lesson.content_type === 'presentation' ? 'Presentation (Multi-format)' : (lesson.content_type || lesson.lesson_type || 'Unknown')} • {lesson.duration_minutes || 0} min
-                                          </p>
-                                        </div>
-                                      </div>
-                                      
-                                      {course.created_by === user?.id && (
-                                        <div className="flex items-center gap-2">
-                                          {lesson.content_type === 'presentation' && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => handleManagePresentation(lesson, course.id)}
-                                              className="text-blue-600 hover:text-blue-700"
-                                              title="Manage Presentation"
-                                            >
-                                              <Settings className="w-4 h-4" />
-                                            </Button>
-                                          )}
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleEditLesson(lesson, course.id)}
-                                          >
-                                            <Edit className="w-4 h-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleAddQuizForLesson(lesson, course.id)}
-                                          >
-                                            <Plus className="w-4 h-4" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => handleDeleteLesson(lesson, course.id)}
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </Button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-500 italic">No lessons in this module yet.</p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    
-                    {/* Display Unassigned Lessons */}
-                    {courseLessons[course.id]?.filter(lesson => !lesson.module_id).length > 0 && (
-                      <div className="border border-gray-200 rounded-lg">
-                        <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400">
-                          <h5 className="font-medium text-gray-900 mb-2">Unassigned Lessons</h5>
-                          <div className="space-y-2">
-                            {courseLessons[course.id]
-                              ?.filter(lesson => !lesson.module_id)
-                              .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
-                              .map(lesson => (
-                                <div
-                                  key={lesson.id}
-                                  className="flex items-center justify-between p-2 bg-white rounded border"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    {lesson.content_type === 'presentation' ? (
-                                      <Settings className="w-4 h-4 text-blue-500" />
-                                    ) : (
-                                      <FileText className="w-4 h-4 text-gray-500" />
-                                    )}
-                                    <span className="text-sm font-medium text-gray-500">
-                                      {lesson.order_index || '?'}.
-                                    </span>
-                                    <div>
-                                      <h6 className="font-medium text-gray-900">
-                                        {lesson.title || 'Untitled Lesson'}
-                                      </h6>
-                                      <p className="text-xs text-gray-500">
-                                        {lesson.content_type === 'presentation' ? 'Presentation (Multi-format)' : (lesson.content_type || lesson.lesson_type || 'Unknown')} • {lesson.duration_minutes || 0} min
-                                      </p>
-                                    </div>
-                                  </div>
-                                  
-                                  {course.created_by === user?.id && (
-                                    <div className="flex items-center gap-2">
-                                      {lesson.content_type === 'presentation' && (
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleManagePresentation(lesson, course.id)}
-                                          className="text-blue-600 hover:text-blue-700"
-                                          title="Manage Presentation"
-                                        >
-                                          <Settings className="w-4 h-4" />
-                                        </Button>
-                                      )}
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleEditLesson(lesson, course.id)}
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDeleteLesson(lesson, course.id)}
-                                        className="text-red-600 hover:text-red-700"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Display Quizzes */}
-                    {courseQuizzes[course.id]?.length > 0 && (
-                      <div className="border border-gray-200 rounded-lg">
-                        <div className="p-3 bg-purple-50 border-l-4 border-purple-400">
-                          <h5 className="font-medium text-gray-900 mb-2">Quizzes</h5>
-                          <div className="space-y-2">
-                            {courseQuizzes[course.id].map(quiz => (
-                              <div key={quiz.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                                <div>
-                                  <h6 className="font-medium text-gray-900">{quiz.title}</h6>
-                                  <p className="text-xs text-gray-500">Pass: {quiz.pass_threshold ?? 0}% • Time limit: {quiz.time_limit_minutes ?? 0} min</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button variant="ghost" size="sm" onClick={() => handleEditQuiz(quiz, course.id)}>
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteQuiz(quiz, course.id)}>
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
               )}
             </Card>
-          ))
+            {structurePanelCourseId === course.id ? (
+              <CourseStructurePanel
+                course={course}
+                user={user}
+                onClose={closeCourseStructurePanel}
+                loading={structurePanelLoading}
+                modules={courseModules[course.id]}
+                lessons={courseLessons[course.id]}
+                quizzes={courseQuizzes[course.id]}
+                expandedModules={expandedModules}
+                onToggleModuleExpansion={toggleModuleExpansion}
+                onAddModule={handleAddModule}
+                onAddLesson={handleAddLesson}
+                onAddQuiz={handleAddQuiz}
+                onEditModule={handleEditModule}
+                onDeleteModule={handleDeleteModule}
+                onEditLesson={handleEditLesson}
+                onDeleteLesson={handleDeleteLesson}
+                onManagePresentation={handleManagePresentation}
+                onAddQuizForLesson={handleAddQuizForLesson}
+                onEditQuiz={handleEditQuiz}
+                onDeleteQuiz={handleDeleteQuiz}
+                className="col-span-full w-full max-w-none"
+              />
+            ) : null}
+            </Fragment>
+            );
+          })
         )}
       </div>
       {/* Delete confirmation modal */}
