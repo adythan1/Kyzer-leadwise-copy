@@ -60,7 +60,7 @@ const Breadcrumbs = () => {
   // Show loading state for course breadcrumbs
   if (loading && location.pathname.includes('/courses/')) {
     return (
-      <nav className="flex items-center space-x-1 text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+      <nav className="flex items-center space-x-1 text-sm text-text-muted mb-2" aria-label="Breadcrumb">
         <div className="flex items-center">
           <Home size={14} className="mr-1" />
           <span>Loading...</span>
@@ -70,7 +70,7 @@ const Breadcrumbs = () => {
   }
 
   return (
-    <nav className="flex items-center space-x-1 text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+    <nav className="flex items-center space-x-1 text-sm text-text-muted mb-2" aria-label="Breadcrumb">
       {breadcrumbs.map((breadcrumb, index) => (
         <div key={`${breadcrumb.href || 'item'}-${index}`} className="flex items-center">
           {index > 0 && <ChevronRight size={14} className="mx-2" />}

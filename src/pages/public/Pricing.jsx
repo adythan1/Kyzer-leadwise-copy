@@ -17,6 +17,7 @@ import {
 import toast from 'react-hot-toast'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import PageTitle from '@/components/layout/PageTitle'
 import { redirectToCheckout, verifyCheckoutSession } from '@/services/stripe'
 import { useAuth } from '@/hooks/auth/useAuth'
 
@@ -386,13 +387,14 @@ export default function Pricing() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary-dark to-primary-default text-white py-20">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Simple, Transparent Pricing
-          </h1>
-          <p className="text-xl text-gray-200 mb-8">
-            Choose the perfect plan for your learning journey. No hidden fees, 
-            cancel anytime, and scale as you grow.
-          </p>
+          <PageTitle
+            size="hero"
+            align="center"
+            title="Simple, Transparent Pricing"
+            titleClassName="!text-white"
+            subtitle="Choose the perfect plan for your learning journey. No hidden fees, cancel anytime, and scale as you grow."
+            subtitleWrapperClassName="text-xl text-gray-200 mb-8 max-w-3xl mx-auto"
+          />
           
           {/* Billing Toggle */}
           <div className="inline-flex items-center bg-white/10 rounded-lg p-1 mb-8">

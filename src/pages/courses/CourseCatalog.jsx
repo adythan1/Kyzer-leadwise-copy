@@ -29,6 +29,7 @@ import {
   EmptyState
 } from "@/components/ui";
 import Tooltip from "@/components/ui/Tooltip";
+import PageTitle from "@/components/layout/PageTitle";
 import { LockedCourseOverlay, LockedCourseBadge, FreeTrialBadge } from "@/components/course/UpgradePrompt";
 
 const CourseCatalog = () => {
@@ -544,13 +545,11 @@ const CourseCatalog = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Course Catalog</h1>
-          <p className="text-gray-600 mt-1">
-            Discover courses to advance your skills and career
-          </p>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle
+          title="Course Catalog"
+          subtitle="Discover courses to advance your skills and career"
+        />
 
         {/* View Controls */}
         <div className="flex items-center gap-2">

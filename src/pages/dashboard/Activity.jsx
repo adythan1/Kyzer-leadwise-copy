@@ -14,6 +14,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import PageTitle from '@/components/layout/PageTitle';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -163,21 +164,21 @@ const Activity = () => {
     <div className="min-h-screen bg-background-light">
       {/* Header */}
       <div className="bg-background-white border-b border-border">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-1">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link 
-                to="/app/dashboard"
-                className="p-2 hover:bg-background-light rounded-lg transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-text-medium" />
-              </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-text-dark">Activity History</h1>
-                <p className="text-text-light mt-1">
-                  View all your learning activities and progress
-                </p>
-              </div>
+              <PageTitle
+                leading={
+                  <Link
+                    to="/app/dashboard"
+                    className="shrink-0 rounded-lg p-2 transition-colors hover:bg-background-light"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-text-medium" />
+                  </Link>
+                }
+                title="Activity History"
+                subtitle="View all your learning activities and progress"
+              />
             </div>
           </div>
         </div>

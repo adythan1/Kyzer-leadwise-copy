@@ -14,6 +14,7 @@ import {
   Download,
   Trash2,
 } from "lucide-react";
+import PageTitle from "@/components/layout/PageTitle";
 
 export default function Settings() {
   const [theme, setTheme] = useState("system");
@@ -187,13 +188,11 @@ export default function Settings() {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-2">
-            <SettingsIcon className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-bold text-text-dark">Settings</h1>
-          </div>
-          <p className="text-text-light">
-            Customize your learning experience and manage your preferences
-          </p>
+          <PageTitle
+            leading={<SettingsIcon className="w-6 h-6 shrink-0 text-primary" aria-hidden />}
+            title="Settings"
+            subtitle="Customize your learning experience and manage your preferences"
+          />
         </div>
 
         {/* Settings Groups */}

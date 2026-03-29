@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import PageTitle from '@/components/layout/PageTitle'
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -132,12 +133,14 @@ export default function Contact() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary-dark to-primary-default text-white py-20">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Get in Touch
-          </h1>
-          <p className="text-xl text-gray-200 mb-8">
-            Have questions about Leadwise Academy? We're here to help you succeed with your learning initiatives.
-          </p>
+          <PageTitle
+            size="hero"
+            align="center"
+            title="Get in Touch"
+            titleClassName="!text-white"
+            subtitle="Have questions about Leadwise Academy? We're here to help you succeed with your learning initiatives."
+            subtitleWrapperClassName="text-xl text-gray-200 mb-8 max-w-3xl mx-auto"
+          />
         </div>
       </section>
 

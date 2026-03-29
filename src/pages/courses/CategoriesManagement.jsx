@@ -24,6 +24,7 @@ import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CategoryForm from '@/components/course/CategoryForm';
 import { useToast } from '@/components/ui';
+import PageTitle from '@/components/layout/PageTitle';
 
 export default function CategoriesManagement() {
   const { user } = useAuth();
@@ -114,14 +115,12 @@ export default function CategoriesManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Category Management</h1>
-          <p className="text-gray-600 mt-1">
-            Manage course categories for better organization
-          </p>
-        </div>
-        
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle
+          title="Category Management"
+          subtitle="Manage course categories for better organization"
+        />
+
         <Button onClick={handleAddCategory}>
           <Plus className="w-4 h-4 mr-2" />
           Add Category

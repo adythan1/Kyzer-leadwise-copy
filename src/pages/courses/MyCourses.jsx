@@ -484,6 +484,7 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import CertificatePreviewModal from '@/components/course/CertificatePreviewModal'
+import PageTitle from '@/components/layout/PageTitle'
 
 // Certificate Button Component
 function CertificateButton({ course }) {
@@ -804,17 +805,15 @@ export default function MyCourses() {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-1">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-dark">My Courses</h1>
-          <p className="text-text-light mt-1">
-            Continue your learning journey
-          </p>
-        </div>
-        
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle
+          title="My Courses"
+          subtitle="Continue your learning journey"
+        />
+
         <Link to="/app/courses/catalog">
           <Button>
             <BookOpen className="w-4 h-4 mr-2" />

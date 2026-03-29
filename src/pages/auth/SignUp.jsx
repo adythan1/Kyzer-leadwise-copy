@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/auth/useAuth";
 import SignupForm from "@/components/auth/SignupForm";
 import { Users, User, Building, Check } from "lucide-react";
 import leadwiseLogo from "../../assets/images/leadwise.svg";
+import PageTitle from "@/components/layout/PageTitle";
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -40,12 +41,13 @@ export default function Signup() {
             <div className="flex justify-center">
               <img src={leadwiseLogo} alt="Leadwise Logo" className="h-20" />
             </div>
-            <h2 className="text-2xl font-bold text-text-dark">
-              Create your account
-            </h2>
-            <p className="mt-2 text-sm text-text-light">
-              Start your learning journey today
-            </p>
+            <PageTitle
+              as="h2"
+              align="center"
+              title="Create your account"
+              subtitle="Start your learning journey today"
+              subtitleWrapperClassName="mt-2 text-sm text-text-light"
+            />
           </div>
 
           {/* Account Type Selection */}
@@ -143,11 +145,14 @@ export default function Signup() {
       <div className="hidden lg:flex lg:flex-1 bg-primary relative overflow-hidden">
         <div className="flex items-center justify-center w-full p-12">
           <div className="text-center text-white max-w-lg">
-            <h1 className="text-4xl font-bold mb-6">Start Learning Today</h1>
-            <p className="text-lg text-gray-200 mb-8">
-              Join thousands of learners advancing their careers with our
-              comprehensive courses and professional certificates.
-            </p>
+            <PageTitle
+              size="large"
+              align="center"
+              title="Start Learning Today"
+              titleClassName="!text-white"
+              subtitle="Join thousands of learners advancing their careers with our comprehensive courses and professional certificates."
+              subtitleWrapperClassName="text-lg text-gray-200 mb-8"
+            />
 
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
               <h3 className="text-xl font-semibold mb-4">What's included</h3>

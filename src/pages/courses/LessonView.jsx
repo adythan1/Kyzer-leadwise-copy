@@ -25,6 +25,7 @@ import {
 import { ScormPlayer } from '@/components/course'
 import PresentationViewer from '@/components/course/PresentationViewer'
 import CertificatePreviewModal from '@/components/course/CertificatePreviewModal'
+import PageTitle from '@/components/layout/PageTitle'
 import { useCourseStore } from '@/store/courseStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import { useSubscription } from '@/hooks/courses/useSubscription'
@@ -3337,13 +3338,17 @@ export default function LessonView() {
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-1">
             <div className="flex items-start justify-between gap-4 mb-1">
               <div className="flex-1 min-w-0">
                 <p className="text-xs uppercase tracking-wider text-text-light mb-1">
                   {currentLesson?.module?.title || currentCourse.title}
                 </p>
-                <h1 className="text-2xl font-bold text-text-dark">{currentLesson.title}</h1>
+                <PageTitle
+                  title={currentLesson.title}
+                  className="space-y-0"
+                  titleClassName="!pb-2"
+                />
                 <div className="flex items-center gap-3 mt-1.5">
                   <div className="inline-flex items-center gap-1.5 text-text-light text-xs">
                     <Clock className="w-3.5 h-3.5" />
@@ -3415,7 +3420,7 @@ export default function LessonView() {
               </nav>
             </div>
 
-            <div className="py-6">
+            <div className="py-1">
               {activeTab === 'description' && (
                 <div className="space-y-6">
                   <div className="prose max-w-none text-text-medium leading-relaxed">

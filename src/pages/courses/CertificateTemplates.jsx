@@ -22,6 +22,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/components/ui';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CertificateTemplateForm from '@/components/course/CertificateTemplateForm';
+import PageTitle from '@/components/layout/PageTitle';
 
 export default function CertificateTemplates() {
   const { user } = useAuth();
@@ -135,16 +136,14 @@ export default function CertificateTemplates() {
   }
 
   return (
-    <div className="py-6">
+    <div className="py-1">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold text-text-dark mb-2">Certificate Templates</h1>
-            <p className="text-text-light">
-              Manage certificate templates for course completion
-            </p>
-          </div>
+        <div className="flex justify-between items-start gap-4">
+          <PageTitle
+            title="Certificate Templates"
+            subtitle="Manage certificate templates for course completion"
+          />
           <Button onClick={() => setShowForm(true)}>
             <Plus className="w-4 h-4 mr-2" />
             New Template

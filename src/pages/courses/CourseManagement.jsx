@@ -30,6 +30,7 @@ import {
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PageTitle from '@/components/layout/PageTitle';
 import CourseForm from '@/components/course/CourseForm';
 import LessonForm from '@/components/course/LessonForm';
 import ModuleForm from '@/components/course/ModuleForm';
@@ -453,17 +454,15 @@ export default function CourseManagement() {
     );
       }
     return (
-    <div className="py-6">
+    <div className="py-1">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>
-            <p className="text-gray-600 mt-1">
-              Create and manage your courses
-            </p>
-          </div>
-          <div className="flex gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <PageTitle
+            title="Course Management"
+            subtitle="Create and manage your courses"
+          />
+          <div className="flex flex-wrap gap-3">
             <Link to="/app/courses/categories">
               <Button variant="secondary">
                 <Settings className="w-4 h-4 mr-2" />

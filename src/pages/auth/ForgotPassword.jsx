@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import toast from "react-hot-toast";
+import PageTitle from "@/components/layout/PageTitle";
 
 export default function ForgotPassword() {
   const [emailSent, setEmailSent] = useState(false);
@@ -29,8 +30,7 @@ export default function ForgotPassword() {
 
       setEmailSent(true);
       toast.success("Password reset email sent!");
-    } catch (error) {
-      console.error("Reset password error:", error);
+    } catch {
       toast.error("An unexpected error occurred");
     }
   };
@@ -47,15 +47,20 @@ export default function ForgotPassword() {
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold text-text-dark">
-              Check your email
-            </h2>
-            <p className="mt-2 text-sm text-text-light">
-              We've sent a password reset link to{" "}
-              <span className="font-medium text-text-dark">
-                {getValues("email")}
-              </span>
-            </p>
+            <PageTitle
+              as="h2"
+              align="center"
+              title="Check your email"
+              subtitle={
+                <>
+                  We've sent a password reset link to{" "}
+                  <span className="font-medium text-text-dark">
+                    {getValues("email")}
+                  </span>
+                </>
+              }
+              subtitleWrapperClassName="mt-2 text-sm text-text-light"
+            />
           </div>
 
           <div className="bg-background-medium rounded-lg p-6 border border-background-dark">
@@ -105,12 +110,13 @@ export default function ForgotPassword() {
               <span className="text-white font-bold text-xl">K</span>
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-text-dark">
-            Forgot your password?
-          </h2>
-          <p className="mt-2 text-sm text-text-light">
-            No worries! Enter your email and we'll send you a reset link.
-          </p>
+          <PageTitle
+            as="h2"
+            align="center"
+            title="Forgot your password?"
+            subtitle="No worries! Enter your email and we'll send you a reset link."
+            subtitleWrapperClassName="mt-2 text-sm text-text-light"
+          />
         </div>
 
         {/* Form */}

@@ -22,6 +22,7 @@ import BackButton from '@/components/ui/BackButton';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PageTitle from '@/components/layout/PageTitle';
 
 export default function CourseLearning() {
   const { courseId } = useParams();
@@ -243,15 +244,20 @@ export default function CourseLearning() {
   }
 
   return (
-    <div className="max-w-8xl mx-auto px-4 py-6">
+    <div className="max-w-8xl mx-auto px-4 py-1">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{currentCourse.title}</h1>
-            <p className="text-gray-600">{currentCourse.subtitle}</p>
-          </div>
-          
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <PageTitle
+            title={currentCourse.title}
+            {...(currentCourse.subtitle
+              ? {
+                  subtitle: currentCourse.subtitle,
+                  subtitleWrapperClassName: 'pt-1 text-sm text-gray-600 sm:text-base',
+                }
+              : {})}
+          />
+
           {userType && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Learner Type:</span>

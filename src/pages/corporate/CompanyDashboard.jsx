@@ -8,6 +8,7 @@ import { useCorporate } from '@/hooks/corporate/useCorporate';
 import { useCorporateStore } from '@/store/corporateStore';
 import { BookOpen, Plus, Settings, AlertCircle, Users, Building2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import PageTitle from '@/components/layout/PageTitle';
 
 const CompanyDashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -243,13 +244,14 @@ const CompanyDashboard = () => {
       <div className="p-6 max-w-8xl mx-auto">
         <div className="text-center py-12">
           <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            No Organization Found
-          </h2>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            You're not currently part of any organization. Create a new organization 
-            for your company or join an existing one.
-          </p>
+          <PageTitle
+            as="h1"
+            align="center"
+            title="No Organization Found"
+            titleClassName="!text-gray-900"
+            subtitle="You're not currently part of any organization. Create a new organization for your company or join an existing one."
+            subtitleWrapperClassName="text-gray-600 mb-8 max-w-md mx-auto"
+          />
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
@@ -277,19 +279,23 @@ const CompanyDashboard = () => {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {organization.name}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Welcome back, {user?.email}! You are {role === 'admin' ? 'an' : 'a'} {role} of this organization.
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Dashboard shows real-time data from your organization's learning activities.
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <PageTitle
+              title={organization.name}
+              subtitle={
+                <>
+                  <p>
+                    Welcome back, {user?.email}! You are {role === 'admin' ? 'an' : 'a'}{' '}
+                    {role} of this organization.
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Dashboard shows real-time data from your organization&apos;s learning activities.
+                  </p>
+                </>
+              }
+              subtitleWrapperClassName="pt-1 text-sm text-gray-600 sm:text-base space-y-0"
+            />
+            <div className="flex shrink-0 items-center space-x-4">
               <button
                 onClick={fetchDashboardData}
                 disabled={dataLoading}

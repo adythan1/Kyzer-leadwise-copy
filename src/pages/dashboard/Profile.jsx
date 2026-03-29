@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { Loader2 } from "lucide-react";
 import ProfileContent from "../../components/Profile/ProfileContent";
+import PageTitle from "@/components/layout/PageTitle";
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
@@ -20,12 +21,10 @@ export default function Profile() {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text-dark">
-            Account Settings
-          </h1>
-          <p className="text-text-light mt-1">
-            Manage your account settings and preferences
-          </p>
+          <PageTitle
+            title="Account Settings"
+            subtitle="Manage your account settings and preferences"
+          />
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

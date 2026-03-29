@@ -13,6 +13,7 @@ import PresentationViewer from '@/components/course/PresentationViewer';
 import PresentationThumbnail from '@/components/course/PresentationThumbnail';
 import SlideThumbnail from '@/components/course/SlideThumbnail';
 import PresentationCard from '@/components/course/PresentationCard';
+import PageTitle from '@/components/layout/PageTitle';
 import {
   Plus,
   Edit,
@@ -317,13 +318,13 @@ export default function PresentationManagement() {
           Back to Course
         </Button>
         
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{lesson.title}</h1>
-            <p className="text-gray-600">Presentation Management</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <PageTitle
+            title={lesson.title}
+            subtitle="Presentation Management"
+          />
+
+          <div className="flex flex-wrap items-center gap-3">
             {presentation ? (
               <>
                 <Button

@@ -19,6 +19,7 @@ import {
   Calendar
 } from 'lucide-react';
 import QuizResult from '@/components/quiz/QuizResult';
+import PageTitle from '@/components/layout/PageTitle';
 
 function getNotesFromProgressMetadata(metadata) {
   if (metadata == null) return '';
@@ -434,10 +435,12 @@ const QuizView = () => {
                 text="Back to Course"
               />
               <div className="h-6 w-px bg-border-default" />
-              <div>
-                <h1 className="text-lg font-semibold text-text-dark">{quiz.title}</h1>
-                <p className="text-sm text-text-light">{course?.title}</p>
-              </div>
+              <PageTitle
+                size="compact"
+                title={quiz.title}
+                subtitle={course?.title}
+                className="space-y-0"
+              />
             </div>
             
             {/* Quiz Navigation */}
@@ -511,7 +514,7 @@ const QuizView = () => {
                       </div>
                       <div className="max-h-96 overflow-y-auto p-4 space-y-4">
                         {courseNotesForFinalReview.length === 0 ? (
-                          <p className="text-sm text-text-light text-center py-6">
+                          <p className="text-sm text-text-light text-center py-1">
                             No saved lesson notes yet. Use the Notes tab on each lesson while you study.
                           </p>
                         ) : (

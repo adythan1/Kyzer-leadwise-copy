@@ -20,6 +20,7 @@ import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { useCorporateStore } from "@/store/corporateStore";
 import { useCorporate } from "@/hooks/corporate/useCorporate";
 import { supabase, TABLES } from "@/lib/supabase";
+import PageTitle from "@/components/layout/PageTitle";
 
 // Course Completion Item Component
 const CourseCompletionItem = ({ course }) => {
@@ -1141,16 +1142,13 @@ const Reports = () => {
   return (
     <div className="container py-8">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-text-dark mb-2">
-            Learning Reports
-          </h1>
-          <p className="text-text-medium">
-            Analyze your team's learning progress and performance
-          </p>
-        </div>
-        <div className="flex items-center space-x-3 mt-4 lg:mt-0">
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <PageTitle
+          title="Learning Reports"
+          subtitle="Analyze your team's learning progress and performance"
+          subtitleWrapperClassName="pt-1 text-sm text-text-medium sm:text-base"
+        />
+        <div className="flex flex-wrap items-center gap-3">
           <Button variant="secondary" onClick={() => exportReport("pdf")}>
             <Download className="h-4 w-4 mr-2" />
             Export PDF

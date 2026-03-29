@@ -1,6 +1,7 @@
 // src/pages/dashboard/Progress.jsx - Fixed loading states
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
+import PageTitle from '@/components/layout/PageTitle';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProgressChart from '@/components/dashboard/ProgressChart';
 import EnrolledCourses from '@/components/dashboard/EnrolledCourses';
@@ -208,13 +209,11 @@ export default function Progress() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-dark mb-2">Learning Progress</h1>
-          <p className="text-text-light">
-            Track your learning journey and celebrate your achievements
-          </p>
-        </div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <PageTitle
+          title="Learning Progress"
+          subtitle="Track your learning journey and celebrate your achievements"
+        />
         <button
           onClick={handleRefresh}
           disabled={isActuallyLoading}

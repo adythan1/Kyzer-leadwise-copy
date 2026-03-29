@@ -484,7 +484,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
             </div>
 
             {/* Course Resources Section - More Prominent */}
-            <div className="mt-8 pt-6 border-t-2 border-primary-light bg-blue-50 -mx-6 px-6 py-6 rounded-lg">
+            <div className="mt-8 pt-6 border-t-2 border-primary-light bg-blue-50 -mx-6 px-6 py-1 rounded-lg">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-primary-default rounded-lg">
                   <Paperclip className="w-5 h-5 text-white" />

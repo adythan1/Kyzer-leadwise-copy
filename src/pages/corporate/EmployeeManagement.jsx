@@ -31,6 +31,7 @@ import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import CompanySetup from "../../components/corporate/CompanySetup";
+import PageTitle from "@/components/layout/PageTitle";
 import DatabaseDebug from "../../components/corporate/DatabaseDebug";
 import toast from "react-hot-toast";
 import { useCorporateStore, useEmployees, useCurrentCompany, useDepartments, useInvitations } from "../../store/corporateStore";
@@ -389,8 +390,12 @@ const EmployeeManagement = () => {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-text-dark mb-2">Employee Management</h2>
-          <p className="text-text-light">Set up your company to start managing employees</p>
+          <PageTitle
+            as="h1"
+            align="center"
+            title="Employee Management"
+            subtitle="Set up your company to start managing employees"
+          />
         </div>
         <CompanySetup />
         <DatabaseDebug />
@@ -403,15 +408,17 @@ const EmployeeManagement = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-text-dark">Employee Management</h2>
-          <p className="text-text-light">
-            {activeView === 'employees' 
-              ? `Manage your team of ${employees.length} employees`
-              : activeView === 'invitations'
-              ? `Manage ${invitations.length} pending invitations`
-              : `Manage ${departments.length} departments`
+          <PageTitle
+            as="h1"
+            title="Employee Management"
+            subtitle={
+              activeView === "employees"
+                ? `Manage your team of ${employees.length} employees`
+                : activeView === "invitations"
+                  ? `Manage ${invitations.length} pending invitations`
+                  : `Manage ${departments.length} departments`
             }
-          </p>
+          />
           {currentCompany ? (
             <p className="text-sm text-success-default mt-1">
               ✓ Company: {currentCompany.name}

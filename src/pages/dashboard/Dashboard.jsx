@@ -1,38 +1,34 @@
-
 // src/pages/dashboard/Dashboard.jsx
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/auth/useAuth';
-import { useEnrollment } from '@/hooks/courses/useEnrollment';
-import { useRecentActivity } from '@/hooks/courses/useRecentActivity';
-import StatsCard  from '@/components/dashboard/StatsCard';
-import  RecentActivity  from '@/components/dashboard/RecentActivity';
-import EnrolledCourses from '@/components/dashboard/EnrolledCourses';
-import  Recommendations  from '@/components/dashboard/Recommendations';
-import  LoadingSpinner  from '@/components/ui/LoadingSpinner';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/auth/useAuth";
+import PageTitle from "@/components/layout/PageTitle";
+import { useEnrollment } from "@/hooks/courses/useEnrollment";
+import { useRecentActivity } from "@/hooks/courses/useRecentActivity";
+import StatsCard from "@/components/dashboard/StatsCard";
+import RecentActivity from "@/components/dashboard/RecentActivity";
+import EnrolledCourses from "@/components/dashboard/EnrolledCourses";
+import Recommendations from "@/components/dashboard/Recommendations";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-import { 
-  BookOpen, 
-  Trophy, 
-  Clock, 
+import {
+  BookOpen,
+  Trophy,
+  Clock,
   TrendingUp,
   User,
-  Building
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-
+  Building,
+} from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Dashboard = () => {
   const { user, profile } = useAuth();
-  const { 
-    enrollments, 
-    stats, 
-    loading: enrollmentLoading, 
-    error: enrollmentError 
+  const {
+    enrollments,
+    stats,
+    loading: enrollmentLoading,
+    error: enrollmentError,
   } = useEnrollment();
-  const { 
-    activities, 
-    loading: activityLoading 
-  } = useRecentActivity();
+  const { activities, loading: activityLoading } = useRecentActivity();
 
   // Show loading state
   if (enrollmentLoading) {
@@ -52,7 +48,7 @@ export const Dashboard = () => {
             Something went wrong
           </h2>
           <p className="text-text-light mb-4">{enrollmentError}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark"
           >
@@ -65,48 +61,32 @@ export const Dashboard = () => {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
   };
 
-  const isCompanyAccount = profile?.account_type === 'corporate';
+  const isCompanyAccount = profile?.account_type === "corporate";
 
   return (
     <div className="min-h-screen bg-background-light">
       {/* Header Section */}
-      <div className="bg-white border-b border-background-dark">
+      {/* <div className="bg-white border-b border-background-dark"> */}
         <div className="max-w-8xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-text-dark">
-                {getGreeting()}, {profile?.first_name || user?.email}!
-              </h1>
-              <p className="text-text-light mt-1">
-                {isCompanyAccount ? (
-                  <span className="flex items-center gap-2">
-                    <Building size={16} />
-                    {profile?.company_name} Dashboard
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <User size={16} />
-                    Personal Learning Dashboard
-                  </span>
-                )}
-              </p>
-            </div>
-
+            <PageTitle
+              title={`${getGreeting()}, ${profile?.first_name || user?.email}!`}
+            />
             {/* Quick Action Button */}
             <div className="flex gap-3">
               <Link to="/app/courses">
-              <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
-                Browse Courses
-              </button>
+                <button className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors">
+                  Browse Courses
+                </button>
               </Link>
             </div>
           </div>
-        </div>
+        {/* </div> */}
       </div>
 
       {/* Main Dashboard Content */}
@@ -143,22 +123,26 @@ export const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column - Enrolled Courses */}
           <div className="lg:col-span-2">
-            <EnrolledCourses 
+            <EnrolledCourses
               courses={enrollments
-                .filter(enrollment => enrollment.courses)
-                .map(enrollment => ({
+                .filter((enrollment) => enrollment.courses)
+                .map((enrollment) => ({
                   id: enrollment.courses.id,
                   title: enrollment.courses.title,
                   description: enrollment.courses.description,
                   thumbnail_url: enrollment.courses.thumbnail_url,
                   difficulty_level: enrollment.courses.difficulty_level,
                   progress: enrollment.progress_percentage || 0,
-                  status: enrollment.progress_percentage >= 100 ? 'completed' : 
-                          enrollment.progress_percentage > 0 ? 'in-progress' : 'not-started',
+                  status:
+                    enrollment.progress_percentage >= 100
+                      ? "completed"
+                      : enrollment.progress_percentage > 0
+                        ? "in-progress"
+                        : "not-started",
                   enrollment_id: enrollment.id,
                   enrolled_at: enrollment.enrolled_at,
                   completed_at: enrollment.completed_at,
-                  last_accessed: enrollment.last_accessed
+                  last_accessed: enrollment.last_accessed,
                 }))}
               loading={enrollmentLoading}
             />
@@ -166,11 +150,8 @@ export const Dashboard = () => {
 
           {/* Right Column - Activity & Recommendations */}
           <div className="space-y-8">
-            <RecentActivity 
-              activities={activities}
-              loading={activityLoading}
-            />
-            <Recommendations 
+            <RecentActivity activities={activities} loading={activityLoading} />
+            <Recommendations
               enrollments={enrollments}
               isCompanyAccount={isCompanyAccount}
             />
@@ -201,7 +182,9 @@ export const Dashboard = () => {
                   <div className="text-2xl font-bold text-primary">
                     {stats.completed}
                   </div>
-                  <div className="text-sm text-text-light">Certificates Earned</div>
+                  <div className="text-sm text-text-light">
+                    Certificates Earned
+                  </div>
                 </div>
               </div>
             </div>

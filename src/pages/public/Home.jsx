@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+import PageTitle from "@/components/layout/PageTitle";
 export default function Home() {
   const features = [
     {
@@ -139,18 +140,22 @@ export default function Home() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6">
-                Transform Learning Into
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-green-200">
-                  {" "}
-                  Growth
-                </span>
-              </h1>
-              <p className="text-xl text-gray-200 mb-8 leading-relaxed">
-                Empower your team with the most comprehensive learning
-                management system. From individual skill building to
-                enterprise-wide training programs.
-              </p>
+              <PageTitle
+                size="hero"
+                align="left"
+                title={
+                  <>
+                    Transform Learning Into{" "}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-green-200">
+                      Growth
+                    </span>
+                  </>
+                }
+                titleClassName="!text-white !leading-tight"
+                subtitle="Empower your team with the most comprehensive learning management system. From individual skill building to enterprise-wide training programs."
+                subtitleWrapperClassName="text-xl text-gray-200 mb-8 leading-relaxed"
+                className="mb-0"
+              />
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Link to="/signup">

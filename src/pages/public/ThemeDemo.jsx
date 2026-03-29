@@ -3,6 +3,7 @@ import ThemeSwitcher from '@/components/ui/ThemeSwitcher';
 import ThemeToggle from '@/components/ui/ThemeToggle';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import PageTitle from '@/components/layout/PageTitle';
 
 export default function ThemeDemo() {
   const { theme, isDark, isLight, isCustom } = useTheme();
@@ -32,12 +33,13 @@ export default function ThemeDemo() {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-text-dark mb-4">
-            Theme System Demo
-          </h1>
-          <p className="text-xl text-text-light mb-8">
-            Explore the different themes available in Leadwise Academy
-          </p>
+          <PageTitle
+            size="large"
+            align="center"
+            title="Theme System Demo"
+            subtitle="Explore the different themes available in Leadwise Academy"
+            subtitleWrapperClassName="text-xl text-text-light mb-8"
+          />
           
           {/* Theme Controls */}
           <div className="flex items-center justify-center gap-4 mb-8">

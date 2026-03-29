@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import PageTitle from "@/components/layout/PageTitle";
 import { useAuthStore } from "../../store/authStore";
 import { useCorporateStore } from "../../store/corporateStore";
 import toast from "react-hot-toast";
@@ -690,12 +691,11 @@ const CompanySettings = () => {
     <div className="container py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text-dark mb-2">
-          Company Settings
-        </h1>
-        <p className="text-text-medium">
-          Manage your organization's settings and preferences
-        </p>
+        <PageTitle
+          title="Company Settings"
+          subtitle="Manage your organization's settings and preferences"
+          subtitleWrapperClassName="pt-1 text-sm text-text-medium sm:text-base"
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/auth/useAuth";
 import { Mail, RefreshCw, CheckCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import leadwiseLogo from "../../assets/images/leadwise.svg";
+import PageTitle from "@/components/layout/PageTitle";
 
 export default function VerifyEmail() {
   const navigate = useNavigate();
@@ -61,8 +62,7 @@ export default function VerifyEmail() {
         setLastResendTime(new Date());
         setCountdown(60); // 60 second cooldown
       }
-    } catch (error) {
-      console.error('Resend error:', error);
+    } catch {
       toast.error('Failed to resend email');
     } finally {
       setIsResending(false);
@@ -100,19 +100,19 @@ export default function VerifyEmail() {
             <Mail className="w-8 h-8 text-primary" />
           </div>
           
-          <h1 className="text-2xl font-bold text-text-dark mb-2">
-            Check your email
-          </h1>
-          
-          <p className="text-text-light">
-            We sent a verification link to
-          </p>
-          
-          {userEmail && (
-            <p className="font-medium text-text-dark mt-1">
-              {userEmail}
-            </p>
-          )}
+          <PageTitle
+            align="center"
+            title="Check your email"
+            subtitle={
+              <>
+                <p className="text-text-light">We sent a verification link to</p>
+                {userEmail ? (
+                  <p className="font-medium text-text-dark mt-1">{userEmail}</p>
+                ) : null}
+              </>
+            }
+            subtitleWrapperClassName="space-y-0"
+          />
         </div>
 
         {/* Instructions */}

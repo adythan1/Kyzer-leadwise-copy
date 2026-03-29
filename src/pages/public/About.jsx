@@ -13,6 +13,7 @@ import {
 import { Link } from 'react-router-dom'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import PageTitle from '@/components/layout/PageTitle'
 
 export default function About() {
   return (
@@ -21,13 +22,14 @@ export default function About() {
       <section className="bg-gradient-to-br from-primary-dark to-primary text-white py-20">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-8xl mx-auto">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Transforming Learning for the Modern Workplace
-            </h1>
-            <p className="text-xl text-gray-200 mb-8">
-              We're on a mission to make professional development accessible, engaging, 
-              and effective for individuals and organizations worldwide.
-            </p>
+            <PageTitle
+              size="hero"
+              align="center"
+              title="Transforming Learning for the Modern Workplace"
+              titleClassName="!text-white"
+              subtitle="We're on a mission to make professional development accessible, engaging, and effective for individuals and organizations worldwide."
+              subtitleWrapperClassName="text-xl text-gray-200 mb-8 max-w-3xl mx-auto"
+            />
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
                 <Button size="lg" className="bg-white text-primary-default hover:bg-gray-100">

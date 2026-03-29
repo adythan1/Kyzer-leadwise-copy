@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/auth/useAuth";
 import LoginForm from "@/components/auth/LoginForm";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import leadwiseLogo from "../../assets/images/leadwise.svg";
+import PageTitle from "@/components/layout/PageTitle";
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,10 +30,13 @@ return <Navigate to="/app/dashboard" replace />;     // Prevent rendering the lo
             <div className="flex justify-center">
               <img src={leadwiseLogo} alt="Leadwise Logo" className="h-20" />
             </div>
-            <h2 className="text-2xl font-bold text-text-dark">Welcome back</h2>
-            <p className="mt-2 text-sm text-text-light">
-              Sign in to your account to continue learning
-            </p>
+            <PageTitle
+              as="h2"
+              align="center"
+              title="Welcome back"
+              subtitle="Sign in to your account to continue learning"
+              subtitleWrapperClassName="mt-2 text-sm text-text-light"
+            />
           </div>
 
           {/* Login Form */}
@@ -67,14 +71,14 @@ return <Navigate to="/app/dashboard" replace />;     // Prevent rendering the lo
         <div className="flex items-center justify-center w-full p-12">
           
           <div className="text-center text-white max-w-lg">
-            
-            <h1 className="text-4xl font-bold mb-6">
-              Continue Your Learning Journey
-            </h1>
-            <p className="text-lg text-gray-200 mb-8">
-              Access your courses, track your progress, and advance your skills
-              with our comprehensive learning platform.
-            </p>
+            <PageTitle
+              size="large"
+              align="center"
+              title="Continue Your Learning Journey"
+              titleClassName="!text-white"
+              subtitle="Access your courses, track your progress, and advance your skills with our comprehensive learning platform."
+              subtitleWrapperClassName="text-lg text-gray-200 mb-8"
+            />
 
             {/* Feature highlights */}
             <div className="space-y-4">

@@ -16,6 +16,7 @@ import { useAuthStore } from '@/store/authStore'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import PageTitle from '@/components/layout/PageTitle'
 
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams()
@@ -73,8 +74,7 @@ export default function AcceptInvitation() {
 
       setInvitationData(mockInvitation)
       setAcceptanceStatus('ready')
-    } catch (error) {
-      console.error('Failed to validate invitation:', error)
+    } catch {
       setAcceptanceStatus('error')
     }
   }
@@ -90,8 +90,7 @@ export default function AcceptInvitation() {
       setTimeout(() => {
         navigate('/dashboard')
       }, 3000)
-    } catch (error) {
-      console.error('Failed to accept invitation:', error)
+    } catch {
       setAcceptanceStatus('error')
     }
   }
@@ -118,10 +117,12 @@ export default function AcceptInvitation() {
         <Card className="max-w-md w-full">
           <div className="p-8 text-center">
             <AlertCircle className="w-16 h-16 text-error-default mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-text-dark mb-2">Invalid Invitation</h1>
-            <p className="text-text-light mb-6">
-              This invitation link is invalid or has expired. Please contact your company administrator for a new invitation.
-            </p>
+            <PageTitle
+              align="center"
+              title="Invalid Invitation"
+              subtitle="This invitation link is invalid or has expired. Please contact your company administrator for a new invitation."
+              subtitleWrapperClassName="text-text-light mb-6"
+            />
             <div className="space-y-3">
               <Button onClick={() => navigate('/')} className="w-full">
                 Go to Homepage
@@ -144,10 +145,12 @@ export default function AcceptInvitation() {
             <div className="w-16 h-16 bg-success-light rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-success-default" />
             </div>
-            <h1 className="text-2xl font-bold text-text-dark mb-2">Welcome to the Team!</h1>
-            <p className="text-text-light mb-6">
-              You've successfully joined {invitationData?.company?.name}. You'll be redirected to your dashboard shortly.
-            </p>
+            <PageTitle
+              align="center"
+              title="Welcome to the Team!"
+              subtitle={`You've successfully joined ${invitationData?.company?.name}. You'll be redirected to your dashboard shortly.`}
+              subtitleWrapperClassName="text-text-light mb-6"
+            />
             <div className="space-y-3">
               <Button onClick={() => navigate('/dashboard')} className="w-full">
                 <ArrowRight className="w-4 h-4 mr-2" />
@@ -166,10 +169,11 @@ export default function AcceptInvitation() {
         {/* Header */}
         <div className="text-center mb-8">
           <Building2 className="w-16 h-16 text-primary-default mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-text-dark mb-2">Company Invitation</h1>
-          <p className="text-text-light">
-            You've been invited to join a corporate learning platform
-          </p>
+          <PageTitle
+            align="center"
+            title="Company Invitation"
+            subtitle="You've been invited to join a corporate learning platform"
+          />
         </div>
 
         {/* Invitation Details */}

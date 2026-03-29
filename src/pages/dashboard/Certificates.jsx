@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import CertificatePreviewModal from '@/components/course/CertificatePreviewModal';
 import CertificateGalleryCard from '@/components/dashboard/CertificateGalleryCard';
+import PageTitle from '@/components/layout/PageTitle';
 
 function getCertificateDisplayStatus(certificate) {
   if (certificate.status) return certificate.status;
@@ -136,7 +137,7 @@ export default function Certificates() {
 
   if (loading) {
     return (
-      <div className="space-y-8 bg-background-light -mx-4 px-4 py-6 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
+      <div className="space-y-8 bg-background-light -mx-4 px-4 py-1 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
         <div className="animate-pulse space-y-4">
           <div className="h-9 bg-gray-200 rounded w-40" />
           <div className="h-4 bg-gray-200 rounded w-2/3 max-w-md" />
@@ -157,7 +158,7 @@ export default function Certificates() {
   }
 
   return (
-    <div className="space-y-8 bg-background-light -mx-4 px-4 py-6 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
+    <div className="space-y-8 bg-background-light -mx-4 px-4 py-1 sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent rounded-lg">
       <CertificatePreviewModal
         courseId={preview.courseId}
         courseName={preview.courseName}
@@ -166,18 +167,10 @@ export default function Certificates() {
         onClose={closePreview}
       />
 
-      <header className="space-y-1">
-        <h1 className="relative inline-block text-2xl font-bold text-text-dark pb-3">
-          Certificates
-          <span
-            className="absolute bottom-0 left-0 h-1 w-14 rounded-full bg-[#F7841C]"
-            aria-hidden
-          />
-        </h1>
-        <p className="text-text-light text-sm sm:text-base pt-1">
-          Your achievements and completed courses
-        </p>
-      </header>
+      <PageTitle
+        title="Certificates"
+        subtitle="Your achievements and completed courses"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
         <Card className="p-5 border-border shadow-sm">

@@ -34,6 +34,7 @@ import ShareCourseModal from '@/components/course/ShareCourseModal'
 import { useToast } from '@/components/ui'
 import { UpgradeBanner, FreeTrialBadge } from '@/components/course/UpgradePrompt'
 import CourseDiscussionPanel from '@/components/course/CourseDiscussionPanel'
+import PageTitle from '@/components/layout/PageTitle'
 
 const COURSE_DETAIL_TABS = ['overview', 'curriculum', 'instructor', 'reviews', 'resources', 'community']
 
@@ -452,8 +453,19 @@ export default function CourseDetail() {
               )}
             </div>
             
-            <h1 className="text-2xl md:text-4xl font-bold mb-4">{course.title}</h1>
-            <p className="text-xl text-white/90 mb-6">{course.subtitle || course.description?.substring(0, 100) + '...'}</p>
+            <PageTitle
+              size="large"
+              title={course.title}
+              titleClassName="!text-white"
+              subtitle={
+                course.subtitle ||
+                (course.description
+                  ? `${String(course.description).substring(0, 100)}…`
+                  : null)
+              }
+              subtitleWrapperClassName="pt-1 text-xl text-white/90 mb-6"
+              className="space-y-1"
+            />
             
             <div className="flex flex-wrap items-center gap-6 text-sm">
               <Button
