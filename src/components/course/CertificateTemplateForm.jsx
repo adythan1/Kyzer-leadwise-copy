@@ -1,5 +1,5 @@
 // src/components/course/CertificateTemplateForm.jsx
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, Eye, AlertCircle, Palette } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -11,9 +11,10 @@ import {
   revokeObjectURL,
   handleCertificateError,
   sanitizeTemplateUrl,
-  CERTIFICATE_THEMES
+  cleanThemeColorsForPersistence,
 } from '@/utils/certificateUtils';
 import CertificateThemeSelector from './CertificateThemeSelector';
+import CertificateColorCustomizer from './CertificateColorCustomizer';
 import CertificatePreview from './CertificatePreview';
 
 export default function CertificateTemplateForm({
@@ -22,7 +23,7 @@ export default function CertificateTemplateForm({
   onSubmit,
   onCancel
 }) {
-  const { success, error: showError } = useToast();
+  const { error: showError } = useToast();
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -33,7 +34,11 @@ export default function CertificateTemplateForm({
     is_default: template?.is_default || false,
     theme: template?.theme || 'gallery',
     logo_url: template?.logo_url || '',
-    logo_position: template?.logo_position || 'top-left'
+    logo_position: template?.logo_position || 'top-left',
+    theme_colors:
+      template?.theme_colors && typeof template.theme_colors === 'object'
+        ? { ...template.theme_colors }
+        : {},
   });
 
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -51,7 +56,6 @@ export default function CertificateTemplateForm({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(
     template?.logo_url ? (sanitizeTemplateUrl(template.logo_url) || '') : ''
   );
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const logoInputRef = useRef(null);
 
   // Cleanup effect for memory leak prevention
@@ -203,7 +207,8 @@ export default function CertificateTemplateForm({
       const submissionData = {
         ...formData,
         template_url: templateUrl,
-        logo_url: logoUrl
+        logo_url: logoUrl,
+        theme_colors: cleanThemeColorsForPersistence(formData.theme_colors),
       };
 
       await onSubmit(submissionData);
@@ -241,10 +246,21 @@ export default function CertificateTemplateForm({
                   </h3>
                   <CertificateThemeSelector
                     selectedTheme={formData.theme}
-                    onThemeChange={(theme) => setFormData(prev => ({ ...prev, theme }))}
-                    onPreview={(theme) => setShowPreview(true)}
+                    onThemeChange={(theme) =>
+                      setFormData((prev) => ({ ...prev, theme, theme_colors: {} }))
+                    }
+                    onPreview={() => setShowPreview(true)}
                     disabled={isUploading}
                   />
+                  <div className="mt-6 pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-semibold text-text-dark mb-3">Custom colors</h4>
+                    <CertificateColorCustomizer
+                      themeKey={formData.theme}
+                      value={formData.theme_colors || {}}
+                      onChange={(theme_colors) => setFormData((prev) => ({ ...prev, theme_colors }))}
+                      disabled={isUploading}
+                    />
+                  </div>
                 </Card>
                 {/* Basic Information */}
                 <Card className="p-4">
@@ -453,6 +469,7 @@ export default function CertificateTemplateForm({
                       theme={formData.theme}
                       logoUrl={logoPreviewUrl || formData.logo_url}
                       logoPosition={formData.logo_position}
+                      themeColors={formData.theme_colors || {}}
                       onDownload={() => {
                         // Handle download preview if needed
                       }}

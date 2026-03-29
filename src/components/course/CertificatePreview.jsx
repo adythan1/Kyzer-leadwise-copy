@@ -12,6 +12,7 @@ export default function CertificatePreview({
   showWatermark = true,
   logoUrl = null,
   logoPosition = 'top-left',
+  themeColors = null,
   onDownload,
   className = '',
 }) {
@@ -32,16 +33,23 @@ export default function CertificatePreview({
       setError(null);
 
       try {
+        const { renderCertificateCanvas, getCertificateCanvasDimensions } = await import(
+          '@/utils/certificateUtils'
+        );
+        const { width: cw, height: ch } = getCertificateCanvasDimensions(theme);
         const canvas = document.createElement('canvas');
-        canvas.width = 800;
-        canvas.height = 600;
+        canvas.width = cw;
+        canvas.height = ch;
         const ctx = canvas.getContext('2d');
 
-        const { renderCertificateCanvas } = await import('@/utils/certificateUtils');
         await renderCertificateCanvas(ctx, canvas.width, canvas.height, theme, certificateData, {
           logo_url: logoUrl,
           logo_position: logoPosition,
           showWatermark,
+          theme_colors:
+            themeColors && typeof themeColors === 'object' && Object.keys(themeColors).length > 0
+              ? themeColors
+              : undefined,
         });
 
         if (cancelled) return;
@@ -77,7 +85,7 @@ export default function CertificatePreview({
         previewUrlRef.current = null;
       }
     };
-  }, [certificateData, theme, logoUrl, logoPosition, showWatermark, refreshKey]);
+  }, [certificateData, theme, logoUrl, logoPosition, showWatermark, themeColors, refreshKey]);
 
   const handleDownload = async () => {
     if (onDownload) {
@@ -147,7 +155,10 @@ export default function CertificatePreview({
                 src={previewUrl}
                 alt="Certificate Preview"
                 className="w-full h-auto max-h-96 object-contain"
-                style={{ aspectRatio: '4/3' }}
+                style={{
+                  aspectRatio:
+                    theme === 'formal' || theme === 'achievement' ? '3/2' : '4/3',
+                }}
               />
             </div>
 

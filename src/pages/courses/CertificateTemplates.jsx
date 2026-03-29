@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuth } from '@/hooks/auth/useAuth';
-import { sanitizeTemplateUrl } from '@/utils/certificateUtils';
+import { sanitizeTemplateUrl, handleCertificateError } from '@/utils/certificateUtils';
 import {
   Plus,
   Edit,
@@ -65,7 +65,7 @@ export default function CertificateTemplates() {
     });
 
     if (result.error) {
-      showError('Failed to create certificate template');
+      showError(handleCertificateError(result.error, 'Create certificate template'));
     } else {
       success('Certificate template created successfully');
       setShowForm(false);
@@ -76,7 +76,7 @@ export default function CertificateTemplates() {
     const result = await updateCertificateTemplate(editingTemplate.id, templateData);
 
     if (result.error) {
-      showError('Failed to update certificate template');
+      showError(handleCertificateError(result.error, 'Update certificate template'));
     } else {
       success('Certificate template updated successfully');
       setEditingTemplate(null);
@@ -89,7 +89,7 @@ export default function CertificateTemplates() {
       const result = await deleteCertificateTemplate(deleteDialog.template.id);
 
       if (result.error) {
-        showError('Failed to delete certificate template');
+        showError(handleCertificateError(result.error, 'Delete certificate template'));
       } else {
         success('Certificate template deleted successfully');
       }
@@ -110,7 +110,7 @@ export default function CertificateTemplates() {
     const result = await updateCertificateTemplate(templateId, { is_default: true });
 
     if (result.error) {
-      showError('Failed to set default template');
+      showError(handleCertificateError(result.error, 'Set default template'));
     } else {
       success('Default template updated successfully');
     }
@@ -324,6 +324,7 @@ export default function CertificateTemplates() {
       {/* Template Form Modal */}
       {showForm && (
         <CertificateTemplateForm
+          key={editingTemplate?.id ?? 'new-template'}
           template={editingTemplate}
           availablePlaceholders={availablePlaceholders}
           onSubmit={editingTemplate ? handleUpdateTemplate : handleCreateTemplate}

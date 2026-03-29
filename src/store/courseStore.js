@@ -1,6 +1,51 @@
 // src/store/courseStore.js
 import { create } from 'zustand';
 import { supabase, TABLES, safeQuery, getUserProfile } from '@/lib/supabase';
+import { isMissingSchemaColumnError } from '@/utils/certificateUtils';
+
+const CERT_TEMPLATE_CORE_KEYS = [
+  'name',
+  'description',
+  'template_url',
+  'placeholders',
+  'is_default',
+];
+const CERT_TEMPLATE_EXTENDED_KEYS = ['theme', 'logo_url', 'logo_position', 'theme_colors'];
+
+function buildCertificateTemplateInsert(templateData, includeExtended) {
+  const row = {
+    name: templateData.name,
+    description: templateData.description,
+    template_url: templateData.template_url,
+    placeholders: templateData.placeholders || {},
+    is_default: templateData.is_default || false,
+    created_by: templateData.created_by,
+    created_at: new Date().toISOString(),
+  };
+  if (includeExtended) {
+    const logo = templateData.logo_url;
+    row.theme = templateData.theme || 'gallery';
+    row.logo_url = logo && String(logo).trim() !== '' ? logo : null;
+    row.logo_position = templateData.logo_position || 'top-left';
+    row.theme_colors = templateData.theme_colors ?? null;
+  }
+  return row;
+}
+
+function buildCertificateTemplateUpdatePayload(updates, includeExtended) {
+  const keys = includeExtended
+    ? [...CERT_TEMPLATE_CORE_KEYS, ...CERT_TEMPLATE_EXTENDED_KEYS]
+    : CERT_TEMPLATE_CORE_KEYS;
+  const filtered = {};
+  for (const key of keys) {
+    if (key in updates) filtered[key] = updates[key];
+  }
+  if (Object.prototype.hasOwnProperty.call(filtered, 'logo_url') && filtered.logo_url === '') {
+    filtered.logo_url = null;
+  }
+  filtered.updated_at = new Date().toISOString();
+  return filtered;
+}
 
 // Helper function to check if error is a table not found error
 const isTableNotFoundError = (error) => {
@@ -1178,7 +1223,7 @@ const useCourseStore = create((set, get) => ({
 
     createCertificateTemplate: async (templateData) => {
       try {
-        const { data, error } = await supabase
+        const { data: insertedRows, error } = await supabase
           .from(TABLES.CERTIFICATE_TEMPLATES)
           .insert({
             name: templateData.name,
@@ -1188,11 +1233,21 @@ const useCourseStore = create((set, get) => ({
             is_default: templateData.is_default || false,
             created_by: templateData.created_by,
             created_at: new Date().toISOString(),
+            theme: templateData.theme || 'gallery',
+            logo_url: templateData.logo_url || null,
+            logo_position: templateData.logo_position || 'top-left',
+            theme_colors: templateData.theme_colors ?? null,
           })
-          .select()
-          .single();
+          .select();
 
         if (error) throw error;
+
+        const data = Array.isArray(insertedRows) ? insertedRows[0] : insertedRows;
+        if (!data) {
+          throw new Error(
+            'Template was not returned after create. Check Row Level Security on certificate_templates and run the latest migrations (theme, logo_url, theme_colors columns).'
+          );
+        }
 
         // Refresh templates
         const { data: updated } = await get().actions.fetchCertificateTemplates();
@@ -1206,21 +1261,33 @@ const useCourseStore = create((set, get) => ({
 
     updateCertificateTemplate: async (templateId, updates) => {
       try {
-        const allowedColumns = ['name', 'description', 'template_url', 'placeholders', 'is_default'];
-        const filtered = {};
-        for (const key of allowedColumns) {
-          if (key in updates) filtered[key] = updates[key];
-        }
-        filtered.updated_at = new Date().toISOString();
-
-        const { data, error } = await supabase
+        let filtered = buildCertificateTemplateUpdatePayload(updates, true);
+        let { data: updatedRows, error } = await supabase
           .from(TABLES.CERTIFICATE_TEMPLATES)
           .update(filtered)
           .eq('id', templateId)
-          .select()
-          .single();
+          .select();
+
+        if (error && isMissingSchemaColumnError(error)) {
+          filtered = buildCertificateTemplateUpdatePayload(updates, false);
+          ({ data: updatedRows, error } = await supabase
+            .from(TABLES.CERTIFICATE_TEMPLATES)
+            .update(filtered)
+            .eq('id', templateId)
+            .select());
+        }
 
         if (error) throw error;
+
+        const data = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+        if (!data) {
+          return {
+            data: null,
+            error: new Error(
+              'No row was updated. The template may not exist, or Row Level Security blocked the update. Apply migrations 20260401 (columns) and 20260402 (RLS). You must be the template creator, have a platform admin/instructor profile role, or an active org role (owner/admin/instructor) per 20260402.'
+            ),
+          };
+        }
 
         // Refresh templates
         const { data: updated } = await get().actions.fetchCertificateTemplates();
@@ -1258,8 +1325,10 @@ const useCourseStore = create((set, get) => ({
         const [userProfile, courseData, templateData] = await Promise.all([
           getUserProfile(userId),
           supabase.from(TABLES.COURSES).select('*').eq('id', courseId).single(),
-          supabase.from(TABLES.CERTIFICATE_TEMPLATES).select('*').eq('id', templateId).single()
+          supabase.from(TABLES.CERTIFICATE_TEMPLATES).select('*').eq('id', templateId).maybeSingle()
         ]);
+
+        if (templateData.error) throw templateData.error;
 
         if (userProfile && courseData.data && templateData.data) {
           const certificateData = {
@@ -1301,7 +1370,11 @@ const useCourseStore = create((set, get) => ({
 
     // Generate certificate preview/download with filled placeholders
     generateCertificatePreview: async (certificateId, theme = 'gallery') => {
-      const { renderCertificateCanvas, createCertificateFilename } = await import('@/utils/certificateUtils');
+      const {
+        renderCertificateCanvas,
+        createCertificateFilename,
+        getCertificateCanvasDimensions,
+      } = await import('@/utils/certificateUtils');
 
       let certificate;
 
@@ -1347,10 +1420,11 @@ const useCourseStore = create((set, get) => ({
       }
 
       const resolvedTheme = certificate.template?.theme || theme || 'gallery';
+      const { width: cw, height: ch } = getCertificateCanvasDimensions(resolvedTheme);
 
       const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 600;
+      canvas.width = cw;
+      canvas.height = ch;
       const ctx = canvas.getContext('2d');
 
       await renderCertificateCanvas(
@@ -1362,6 +1436,11 @@ const useCourseStore = create((set, get) => ({
         {
           logo_url: certificate.template?.logo_url,
           logo_position: certificate.template?.logo_position || 'top-left',
+          theme_colors:
+            certificate.template?.theme_colors &&
+            typeof certificate.template.theme_colors === 'object'
+              ? certificate.template.theme_colors
+              : undefined,
         }
       );
 

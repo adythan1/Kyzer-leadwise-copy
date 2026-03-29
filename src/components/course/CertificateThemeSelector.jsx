@@ -1,5 +1,4 @@
 // src/components/course/CertificateThemeSelector.jsx
-import { useState } from 'react';
 import { Check, Palette, Eye } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -11,8 +10,6 @@ export default function CertificateThemeSelector({
   onPreview,
   disabled = false 
 }) {
-  const [previewTheme, setPreviewTheme] = useState(null);
-
   const handleThemeSelect = (themeKey) => {
     if (!disabled) {
       onThemeChange(themeKey);
@@ -20,7 +17,6 @@ export default function CertificateThemeSelector({
   };
 
   const handlePreview = (themeKey) => {
-    setPreviewTheme(themeKey);
     onPreview?.(themeKey);
   };
 
@@ -34,8 +30,12 @@ export default function CertificateThemeSelector({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {Object.entries(CERTIFICATE_THEMES)
           .sort(([a], [b]) => {
-            if (a === 'gallery') return -1;
-            if (b === 'gallery') return 1;
+            const order = ['gallery', 'formal', 'achievement'];
+            const ia = order.indexOf(a);
+            const ib = order.indexOf(b);
+            const ra = ia === -1 ? 99 : ia;
+            const rb = ib === -1 ? 99 : ib;
+            if (ra !== rb) return ra - rb;
             return a.localeCompare(b);
           })
           .map(([themeKey, theme]) => (
