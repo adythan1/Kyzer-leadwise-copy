@@ -147,8 +147,8 @@ export default function Certificates() {
               key={i}
               className="w-full max-w-[340px] animate-pulse"
             >
-              <div className="h-[240px] bg-[#0C1C4F]/30 rounded-sm" />
-              <div className="h-12 bg-[#1565FF]/40 rounded-b-md mt-0.5" />
+              <div className="h-[240px] bg-[#002654]/30 rounded-sm" />
+              <div className="h-12 bg-[#F7841C]/40 rounded-b-md mt-0.5" />
             </div>
           ))}
         </div>
@@ -170,7 +170,7 @@ export default function Certificates() {
         <h1 className="relative inline-block text-2xl font-bold text-text-dark pb-3">
           Certificates
           <span
-            className="absolute bottom-0 left-0 h-1 w-14 rounded-full bg-[#1565FF]"
+            className="absolute bottom-0 left-0 h-1 w-14 rounded-full bg-[#F7841C]"
             aria-hidden
           />
         </h1>
@@ -194,8 +194,8 @@ export default function Certificates() {
 
         <Card className="p-5 border-border shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-[#1565FF]" />
+            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-[#F7841C]" />
             </div>
             <div>
               <p className="text-sm text-text-light">Most recent</p>
@@ -216,13 +216,13 @@ export default function Certificates() {
               placeholder="Search by course name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-[#1565FF]/30 focus:border-[#1565FF]"
+              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-lg text-sm focus:ring-2 focus:ring-[#F7841C]/30 focus:border-[#F7841C]"
             />
           </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2.5 border border-border rounded-lg text-sm bg-background-white focus:ring-2 focus:ring-[#1565FF]/30 focus:border-[#1565FF]"
+            className="px-4 py-2.5 border border-border rounded-lg text-sm bg-background-white focus:ring-2 focus:ring-[#F7841C]/30 focus:border-[#F7841C]"
           >
             <option value="all">All statuses</option>
             <option value="completed">Completed</option>
@@ -244,7 +244,7 @@ export default function Certificates() {
           {!searchTerm && filterStatus === 'all' && (
             <Link
               to="/app/courses"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1565FF] text-white font-semibold px-5 py-2.5 text-sm hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#1565FF]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F7841C] text-white font-semibold px-5 py-2.5 text-sm hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#F7841C]"
             >
               <BookOpen className="w-4 h-4" />
               Browse courses

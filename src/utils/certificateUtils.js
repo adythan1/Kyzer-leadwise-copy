@@ -3,11 +3,15 @@
 
 import leadwiseLogoUrl from '@/assets/images/leadwise.svg';
 
-/** Matches dashboard certificate gallery card (navy frame, white panel, blue accent). */
+/** Leadwise wordmark (`leadwise.svg`): `.st0` navy, `.st1` orange */
+export const LEADWISE_BRAND_NAVY = '#002654';
+export const LEADWISE_BRAND_ORANGE = '#F7841C';
+
+/** Gallery certificate: logo-navy frame, white panel, brand-orange accent bar */
 export const GALLERY_CERT_COLORS = {
-  frame: '#0C1C4F',
-  accentBar: '#1565FF',
-  recipient: '#0C1C4F',
+  frame: LEADWISE_BRAND_NAVY,
+  accentBar: LEADWISE_BRAND_ORANGE,
+  recipient: LEADWISE_BRAND_NAVY,
 };
 
 /**
@@ -564,7 +568,7 @@ export const CERTIFICATE_THEMES = {
   },
   gallery: {
     name: 'Gallery',
-    description: 'Matches learner certificates page—navy frame, white panel, blue accent',
+    description: 'Matches learner certificates page—Leadwise navy frame, white panel, brand-orange accent',
     fonts: {
       title: { family: 'Inter, system-ui, sans-serif', size: 22, weight: 'bold', color: '#111827' },
       subtitle: { family: 'Inter, system-ui, sans-serif', size: 14, weight: '600', color: '#6b7280' },
@@ -572,14 +576,14 @@ export const CERTIFICATE_THEMES = {
       small: { family: 'Inter, system-ui, sans-serif', size: 10, weight: '500', color: '#6b7280' }
     },
     colors: {
-      primary: '#0C1C4F',
+      primary: LEADWISE_BRAND_NAVY,
       secondary: '#111827',
-      accent: '#1565FF',
+      accent: LEADWISE_BRAND_ORANGE,
       background: '#ffffff'
     },
     decorations: {
-      border: { width: 12, color: '#0C1C4F', style: 'solid' },
-      corner: { size: 36, color: '#1565FF' }
+      border: { width: 12, color: LEADWISE_BRAND_NAVY, style: 'solid' },
+      corner: { size: 36, color: LEADWISE_BRAND_ORANGE }
     }
   }
 };
