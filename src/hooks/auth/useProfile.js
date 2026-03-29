@@ -140,6 +140,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./useAuth";
 import { supabase } from "@/lib/supabase";
+import {
+  AVATAR_UNSUPPORTED_TYPE_MESSAGE,
+  getAvatarStorageFileExtension,
+  isAllowedAvatarImageType,
+  userMessageForAvatarStorageError,
+} from "@/utils/avatarUploadLimits";
 
 export function useProfile() {
   const { user, refreshUser } = useAuth();
@@ -301,21 +307,22 @@ export function useProfile() {
         throw new Error("File must be an image");
       }
 
-      // Create unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      
+      if (!isAllowedAvatarImageType(file.type)) {
+        throw new Error(AVATAR_UNSUPPORTED_TYPE_MESSAGE);
+      }
 
-      // Upload to storage
+      const fileExt = getAvatarStorageFileExtension(file.type);
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, file, {
           upsert: true,
+          contentType: file.type,
         });
 
       if (uploadError) {
-        console.error("Upload error details:", uploadError);
-        throw uploadError;
+        throw new Error(userMessageForAvatarStorageError(uploadError.message));
       }
 
       // Get public URL
@@ -345,16 +352,17 @@ export function useProfile() {
         await supabase.auth.updateUser({
           data: { avatar_url: publicUrl }
         });
-      } catch (authError) {
-        console.warn("⚠️ Auth metadata avatar update failed:", authError);
+      } catch {
+        // Optional: sync avatar to auth metadata; profile row already saved
       }
 
       return publicUrl;
 
     } catch (err) {
-      console.error("❌ Error uploading avatar:", err);
-      setError(err.message);
-      throw err;
+      const message =
+        err instanceof Error ? err.message : userMessageForAvatarStorageError(String(err));
+      setError(message);
+      throw err instanceof Error ? err : new Error(message);
     } finally {
       setLoading(false);
     }

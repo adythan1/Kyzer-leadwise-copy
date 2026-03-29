@@ -1,144 +1,83 @@
 // src/components/course/CertificatePreview.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Download, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { useCourseStore } from '@/store/courseStore';
 import { CERTIFICATE_THEMES } from '@/utils/certificateUtils';
 
-export default function CertificatePreview({ 
-  certificateData, 
-  theme = 'classic',
+export default function CertificatePreview({
+  certificateData,
+  theme = 'gallery',
   showWatermark = true,
   logoUrl = null,
   logoPosition = 'top-left',
   onDownload,
-  className = ''
+  className = '',
 }) {
-  const canvasRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
-
-  const actions = useCourseStore(state => state.actions);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const previewUrlRef = useRef(null);
 
   useEffect(() => {
-    if (certificateData) {
-      generatePreview();
-    }
-  }, [certificateData, theme, showWatermark, logoUrl, logoPosition]);
+    if (!certificateData) return undefined;
 
-  const generatePreview = async () => {
-    if (!certificateData) return;
+    let cancelled = false;
 
-    setLoading(true);
-    setError(null);
+    const generatePreview = async () => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      // Generate preview directly with logo support
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // Set canvas size
-      canvas.width = 800;
-      canvas.height = 600;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 600;
+        const ctx = canvas.getContext('2d');
 
-      // Import certificate utilities
-      const { 
-        getDefaultPlaceholderPositions, 
-        getFontStyles, 
-        calculateTextLayout,
-        drawCertificateBorder,
-        drawWatermark,
-        drawLogo
-      } = await import('@/utils/certificateUtils');
+        const { renderCertificateCanvas } = await import('@/utils/certificateUtils');
+        await renderCertificateCanvas(ctx, canvas.width, canvas.height, theme, certificateData, {
+          logo_url: logoUrl,
+          logo_position: logoPosition,
+          showWatermark,
+        });
 
-      // Create a white background for the certificate
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (cancelled) return;
 
-      // Add decorative border and watermark
-      drawCertificateBorder(ctx, canvas.width, canvas.height, theme);
-      if (showWatermark) {
-        drawWatermark(ctx, canvas.width, canvas.height);
-      }
-
-      // Add logo if provided
-      if (logoUrl) {
-        const logoImg = new Image();
-        logoImg.crossOrigin = 'anonymous';
-        logoImg.onload = () => {
-          drawLogo(ctx, logoImg, logoPosition, canvas.width, canvas.height);
-        };
-        logoImg.src = logoUrl;
-      }
-
-      // Add organization name/header at the top
-      const organizationStyles = getFontStyles(theme, 'small');
-      ctx.fillStyle = organizationStyles.fillStyle;
-      ctx.textAlign = 'center';
-      ctx.font = `bold ${organizationStyles.font.split('px')[0]}px ${organizationStyles.font.split('px')[1]}`;
-      const orgName = certificateData.organization_name || 'Leadwise Academy';
-      ctx.fillText(orgName, canvas.width / 2, canvas.height * 0.12);
-
-      // Add "Certificate of Completion" title - lowered to make room for header
-      const titleStyles = getFontStyles(theme, 'title');
-      ctx.fillStyle = titleStyles.fillStyle;
-      ctx.textAlign = titleStyles.textAlign;
-      ctx.font = titleStyles.font;
-      ctx.fillText('Certificate of Completion', canvas.width / 2, canvas.height * 0.3);
-
-      // Get positioning and add text
-      const positions = getDefaultPlaceholderPositions(canvas.width, canvas.height, theme);
-
-      // Fill in the placeholders with enhanced styling
-      Object.keys(positions).forEach(placeholder => {
-        // Skip organization_name as it's already rendered at the top
-        if (placeholder === '{{organization_name}}') return;
-        
-        const position = positions[placeholder];
-        const textType = position.textType || 'body';
-        const value = certificateData[placeholder.replace(/[{}]/g, '')];
-
-        if (value) {
-          // Get theme-specific font styling
-          const fontStyles = getFontStyles(theme, textType);
-          
-          // Apply font styles
-          ctx.fillStyle = fontStyles.fillStyle;
-          ctx.textAlign = fontStyles.textAlign;
-          ctx.font = fontStyles.font;
-          
-          // Calculate text layout for long text
-          const maxWidth = canvas.width * 0.8;
-          const textLayout = calculateTextLayout(value, maxWidth, fontStyles.font);
-          
-          // Draw text with proper line breaks
-          textLayout.lines.forEach((line, index) => {
-            const y = position.y + (index * textLayout.lineHeight);
-            ctx.fillText(line, position.x, y);
-          });
+        canvas.toBlob((blob) => {
+          if (cancelled) return;
+          if (blob) {
+            const url = URL.createObjectURL(blob);
+            if (previewUrlRef.current) {
+              URL.revokeObjectURL(previewUrlRef.current);
+            }
+            previewUrlRef.current = url;
+            setPreviewUrl(url);
+          } else {
+            setError('Failed to generate preview image');
+          }
+          setLoading(false);
+        }, 'image/png');
+      } catch {
+        if (!cancelled) {
+          setError('Failed to generate preview');
+          setLoading(false);
         }
-      });
+      }
+    };
 
-      // Convert to blob
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          setPreviewUrl(url);
-        } else {
-          setError('Failed to generate preview image');
-        }
-      }, 'image/png');
-      
-    } catch (err) {
-      setError('Failed to generate preview');
-    } finally {
-      setLoading(false);
-    }
-  };
+    generatePreview();
+
+    return () => {
+      cancelled = true;
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+        previewUrlRef.current = null;
+      }
+    };
+  }, [certificateData, theme, logoUrl, logoPosition, showWatermark, refreshKey]);
 
   const handleDownload = async () => {
     if (onDownload) {
@@ -146,9 +85,10 @@ export default function CertificatePreview({
     }
   };
 
-  const handleRefresh = () => {
-    generatePreview();
-  };
+  const handleRefresh = useCallback(() => {
+    setError(null);
+    setRefreshKey((key) => key + 1);
+  }, []);
 
   if (loading) {
     return (
@@ -176,44 +116,32 @@ export default function CertificatePreview({
 
   return (
     <Card className={`overflow-hidden ${className}`}>
-      {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Eye className="w-5 h-5 text-primary-default" />
           <h3 className="font-semibold text-text-dark">Certificate Preview</h3>
-          <span className="text-sm text-text-muted">({CERTIFICATE_THEMES[theme]?.name || 'Classic'} Theme)</span>
+          <span className="text-sm text-text-muted">
+            ({CERTIFICATE_THEMES[theme]?.name || 'Gallery'} theme)
+          </span>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDetails(!showDetails)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowDetails(!showDetails)}>
             {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             {showDetails ? 'Hide' : 'Show'} Details
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-          >
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button
-            size="sm"
-            onClick={handleDownload}
-          >
+          <Button size="sm" onClick={handleDownload}>
             <Download className="w-4 h-4 mr-2" />
             Download
           </Button>
         </div>
       </div>
 
-      {/* Preview Content */}
       <div className="p-4">
         {previewUrl ? (
           <div className="space-y-4">
-            {/* Certificate Image */}
             <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
               <img
                 src={previewUrl}
@@ -223,7 +151,6 @@ export default function CertificatePreview({
               />
             </div>
 
-            {/* Theme Details */}
             {showDetails && (
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-text-dark mb-3">Theme Details</h4>
@@ -247,7 +174,7 @@ export default function CertificatePreview({
                   <div>
                     <span className="text-text-muted">Primary Color:</span>
                     <div className="flex items-center gap-2">
-                      <div 
+                      <div
                         className="w-4 h-4 rounded border"
                         style={{ backgroundColor: CERTIFICATE_THEMES[theme]?.colors.primary }}
                       />
@@ -257,7 +184,7 @@ export default function CertificatePreview({
                   <div>
                     <span className="text-text-muted">Accent Color:</span>
                     <div className="flex items-center gap-2">
-                      <div 
+                      <div
                         className="w-4 h-4 rounded border"
                         style={{ backgroundColor: CERTIFICATE_THEMES[theme]?.colors.accent }}
                       />

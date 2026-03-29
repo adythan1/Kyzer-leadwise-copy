@@ -17,6 +17,7 @@ import {
   X,
   Check,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
@@ -24,6 +25,11 @@ import { useAuthStore } from "../../store/authStore";
 import { useCorporateStore } from "../../store/corporateStore";
 import toast from "react-hot-toast";
 import UserManagementDashboard from "../../components/corporate/UserManagementDashboard";
+import {
+  RASTER_IMAGE_FILE_ACCEPT,
+  RASTER_IMAGE_UNSUPPORTED_TYPE_MESSAGE,
+  isAllowedRasterImageType,
+} from "@/utils/avatarUploadLimits";
 
 const companySchema = z.object({
   name: z.string().min(2, "Company name must be at least 2 characters"),
@@ -43,6 +49,7 @@ const CompanySettings = () => {
   const { profile } = useAuthStore();
   const currentCompany = useCorporateStore(state => state.currentCompany);
   const updateCompany = useCorporateStore(state => state.updateCompany);
+  const uploadCompanyLogo = useCorporateStore(state => state.uploadCompanyLogo);
   const fetchCurrentCompany = useCorporateStore(state => state.fetchCurrentCompany);
   const companyStats = useCorporateStore(state => state.companyStats);
   const fetchCompanyStats = useCorporateStore(state => state.fetchCompanyStats);
@@ -53,6 +60,16 @@ const CompanySettings = () => {
   const [billingData, setBillingData] = useState(null);
   const [customDomains, setCustomDomains] = useState([]);
   const [newDomain, setNewDomain] = useState("");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPreviewObjectUrl, setLogoPreviewObjectUrl] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewObjectUrl) {
+        URL.revokeObjectURL(logoPreviewObjectUrl);
+      }
+    };
+  }, [logoPreviewObjectUrl]);
 
   const {
     register,
@@ -114,7 +131,7 @@ const CompanySettings = () => {
             description: currentCompany.description || "",
             address: currentCompany.address || "",
             phone: currentCompany.phone || "",
-            logo: currentCompany.logo || "",
+            logo_url: currentCompany.logo_url || "",
           };
 
           setCompanyData(companyFormData);
@@ -152,14 +169,42 @@ const CompanySettings = () => {
 
   const handleSaveGeneral = async (data) => {
     try {
-      // Update company data via Supabase
       await updateCompany(data);
-
-      // Update local state
       setCompanyData((prev) => ({ ...prev, ...data }));
-    } catch (error) {
-      console.error('Error updating company settings:', error);
-      // Error toast already shown by updateCompany function
+    } catch {
+      // updateCompany shows toast on failure
+    }
+  };
+
+  const handleLogoFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Logo must be smaller than 2MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
+    if (!isAllowedRasterImageType(file.type)) {
+      toast.error(RASTER_IMAGE_UNSUPPORTED_TYPE_MESSAGE);
+      return;
+    }
+
+    setLogoPreviewObjectUrl(URL.createObjectURL(file));
+
+    try {
+      setLogoUploading(true);
+      const publicUrl = await uploadCompanyLogo(file);
+      setCompanyData((prev) => ({ ...prev, logo_url: publicUrl }));
+      setLogoPreviewObjectUrl(null);
+    } catch {
+      setLogoPreviewObjectUrl(null);
+    } finally {
+      setLogoUploading(false);
     }
   };
 
@@ -194,27 +239,66 @@ const CompanySettings = () => {
     <form onSubmit={handleSubmit(handleSaveGeneral)} className="space-y-6">
       {/* Company Logo */}
       <div>
-        <label className="label">Company Logo</label>
-        <div className="flex items-center space-x-4">
-          <div className="w-20 h-20 bg-background-medium rounded-lg flex items-center justify-center">
-            {companyData?.logo ? (
+        <label className="label" htmlFor="company-logo-upload">
+          Company Logo
+        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:space-x-4 sm:gap-0">
+          <div className="relative w-20 h-20 shrink-0 bg-background-medium rounded-lg flex items-center justify-center overflow-hidden ring-1 ring-background-dark">
+            {logoPreviewObjectUrl || companyData?.logo_url ? (
               <img
-                src={companyData.logo}
-                alt="Company logo"
+                src={logoPreviewObjectUrl || companyData.logo_url}
+                alt={
+                  logoPreviewObjectUrl
+                    ? "Preview of selected logo"
+                    : "Company logo"
+                }
                 className="w-full h-full object-cover rounded-lg"
               />
             ) : (
               <Building className="h-8 w-8 text-text-light" />
             )}
+            {logoUploading && (
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-lg bg-background-dark/50"
+                aria-live="polite"
+              >
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              </div>
+            )}
           </div>
-          <div>
-            <Button type="button" variant="secondary" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Logo
+          <div className="min-w-0 flex-1">
+            <input
+              id="company-logo-upload"
+              type="file"
+              accept={RASTER_IMAGE_FILE_ACCEPT}
+              className="hidden"
+              disabled={logoUploading}
+              onChange={handleLogoFileChange}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={logoUploading}
+              onClick={() =>
+                document.getElementById("company-logo-upload")?.click()
+              }
+            >
+              {logoUploading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-2" />
+              )}
+              {logoUploading ? "Uploading…" : "Choose logo"}
             </Button>
             <p className="text-xs text-text-light mt-1">
-              Recommended: 200x200px, PNG or JPG
+              JPEG, PNG, WebP, or GIF, max 2MB. Recommended about 200×200px.
             </p>
+            {logoPreviewObjectUrl && logoUploading && (
+              <p className="text-xs text-text-muted mt-1">
+                Preview of your selection — saving to your organization…
+              </p>
+            )}
           </div>
         </div>
       </div>

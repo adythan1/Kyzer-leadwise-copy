@@ -6,6 +6,11 @@ import { z } from "zod";
 import { User, Camera, Save, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useProfile } from "@/hooks/auth/useProfile";
+import {
+  AVATAR_FILE_INPUT_ACCEPT,
+  AVATAR_UNSUPPORTED_TYPE_MESSAGE,
+  isAllowedAvatarImageType,
+} from "@/utils/avatarUploadLimits";
 
 const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -48,8 +53,7 @@ export default function ProfileTab({ user }) {
     try {
       await updateProfile(data);
       toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } catch {
       toast.error("Failed to update profile");
     }
   };
@@ -64,9 +68,15 @@ export default function ProfileTab({ user }) {
       return;
     }
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please select a valid image file");
+      event.target.value = "";
+      return;
+    }
+
+    if (!isAllowedAvatarImageType(file.type)) {
+      toast.error(AVATAR_UNSUPPORTED_TYPE_MESSAGE);
+      event.target.value = "";
       return;
     }
 
@@ -76,10 +86,12 @@ export default function ProfileTab({ user }) {
       setProfileImage(imageUrl);
       toast.success("Profile picture updated!");
     } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
+      const message =
+        error instanceof Error ? error.message : "Failed to upload image";
+      toast.error(message);
     } finally {
       setUploadingImage(false);
+      event.target.value = "";
     }
   };
 
@@ -114,7 +126,7 @@ export default function ProfileTab({ user }) {
           <input
             id="profile-image"
             type="file"
-            accept="image/*"
+            accept={AVATAR_FILE_INPUT_ACCEPT}
             onChange={handleImageUpload}
             disabled={uploadingImage}
             className="hidden"

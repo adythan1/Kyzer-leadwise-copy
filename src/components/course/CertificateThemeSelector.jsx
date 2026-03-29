@@ -6,7 +6,7 @@ import Card from '@/components/ui/Card';
 import { CERTIFICATE_THEMES } from '@/utils/certificateUtils';
 
 export default function CertificateThemeSelector({ 
-  selectedTheme = 'classic', 
+  selectedTheme = 'gallery', 
   onThemeChange, 
   onPreview,
   disabled = false 
@@ -32,7 +32,13 @@ export default function CertificateThemeSelector({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {Object.entries(CERTIFICATE_THEMES).map(([themeKey, theme]) => (
+        {Object.entries(CERTIFICATE_THEMES)
+          .sort(([a], [b]) => {
+            if (a === 'gallery') return -1;
+            if (b === 'gallery') return 1;
+            return a.localeCompare(b);
+          })
+          .map(([themeKey, theme]) => (
           <Card 
             key={themeKey}
             className={`p-4 cursor-pointer transition-all duration-200 ${

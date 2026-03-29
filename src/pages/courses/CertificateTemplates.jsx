@@ -45,9 +45,10 @@ export default function CertificateTemplates() {
     const loadTemplates = async () => {
       const result = await fetchCertificateTemplates();
       if (result.error) {
-        console.error('Certificate templates error:', result.error);
         if (result.error.message?.includes('does not exist') || result.error.code === 'PGRST106') {
           showError('Certificate templates table not found. Please run the database setup first.');
+        } else if (result.error.code === 'TIMEOUT') {
+          showError('Certificate templates took too long to load. Try again.');
         } else {
           showError('Failed to load certificate templates');
         }

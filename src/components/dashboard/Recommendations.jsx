@@ -27,21 +27,31 @@ const Recommendations = () => {
 
         const { data: enrollments } = await supabase
           .from('course_enrollments')
-          .select('course_id, courses(category)')
+          .select('course_id, courses(category_id)')
           .eq('user_id', user.id);
 
         const enrolledIds = new Set((enrollments || []).map((e) => e.course_id));
-        const enrolledCategories = [
+        const enrolledCategoryIds = [
           ...new Set(
             (enrollments || [])
-              .map((e) => e.courses?.category)
+              .map((e) => e.courses?.category_id)
               .filter(Boolean)
           ),
         ];
 
         let coursesQuery = supabase
           .from(TABLES.COURSES)
-          .select('id, title, description, category, duration_minutes, thumbnail_url, difficulty_level, status')
+          .select(`
+            id,
+            title,
+            description,
+            category_id,
+            category:${TABLES.COURSE_CATEGORIES}(id, name),
+            duration_minutes,
+            thumbnail_url,
+            difficulty_level,
+            status
+          `)
           .eq('status', 'published')
           .eq('catalog_visible', true)
           .limit(50);
@@ -62,7 +72,10 @@ const Recommendations = () => {
 
         const scored = notEnrolled.map((course) => {
           let score = 0;
-          if (enrolledCategories.includes(course.category)) {
+          if (
+            course.category_id &&
+            enrolledCategoryIds.includes(course.category_id)
+          ) {
             score += 10;
           }
           return { ...course, score };
@@ -76,7 +89,7 @@ const Recommendations = () => {
           description: c.description || '',
           thumbnail: c.thumbnail_url,
           duration: c.duration_minutes ? `${c.duration_minutes} min` : 'Self-paced',
-          category: c.category,
+          category: c.category?.name ?? '',
           difficulty_level: c.difficulty_level,
         }));
 

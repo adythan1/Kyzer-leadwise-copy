@@ -18,7 +18,7 @@ import Button from "../../components/ui/Button";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import { useAuthStore } from "../../store/authStore";
 import { useCourseStore } from "../../store/courseStore";
-import { supabase } from "../../lib/supabase";
+import { supabase, TABLES } from "../../lib/supabase";
 
 const Progress = () => {
   const { profile, user } = useAuthStore();
@@ -79,7 +79,8 @@ const Progress = () => {
             courses (
               id,
               title,
-              category,
+              category_id,
+              category:${TABLES.COURSE_CATEGORIES}(name),
               duration_minutes
             )
           `)
@@ -225,9 +226,10 @@ const Progress = () => {
         // Calculate skill progress by category
         const categoryMap = {};
         (enrollments || []).forEach(e => {
-          if (!e.courses || !e.courses.category) return;
+          const categoryName = e.courses?.category?.name;
+          if (!e.courses || !categoryName) return;
 
-          const category = e.courses.category;
+          const category = categoryName;
           if (!categoryMap[category]) {
             categoryMap[category] = {
               skill: category,
@@ -246,7 +248,9 @@ const Progress = () => {
 
         // Calculate hours per category from lesson progress
         for (const category in categoryMap) {
-          const categoryEnrollments = (enrollments || []).filter(e => e.courses?.category === category);
+          const categoryEnrollments = (enrollments || []).filter(
+            (e) => e.courses?.category?.name === category
+          );
           const categoryLessons = categoryEnrollments.map(e => e.course_id);
 
           const { data: categoryLessonProgress } = await supabase

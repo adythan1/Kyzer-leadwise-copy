@@ -31,7 +31,7 @@ export default function CertificateTemplateForm({
     template_url: template?.template_url || '',
     placeholders: template?.placeholders || {},
     is_default: template?.is_default || false,
-    theme: template?.theme || 'classic',
+    theme: template?.theme || 'gallery',
     logo_url: template?.logo_url || '',
     logo_position: template?.logo_position || 'top-left'
   });
@@ -445,6 +445,7 @@ export default function CertificateTemplateForm({
                         user_name: 'John Doe',
                         course_title: 'Advanced React Development',
                         completion_date: new Date().toLocaleDateString(),
+                        issue_date: new Date().toLocaleDateString(),
                         certificate_id: 'CERT-12345-ABC',
                         instructor_name: 'Jane Smith',
                         organization_name: 'Leadwise Academy'

@@ -1,6 +1,12 @@
 // src/store/corporateStore.js
 import { create } from "zustand";
-import { supabase } from "@/lib/supabase";
+import { supabase, STORAGE_BUCKETS } from "@/lib/supabase";
+import {
+  getRasterImageFileExtension,
+  isAllowedRasterImageType,
+  RASTER_IMAGE_UNSUPPORTED_TYPE_MESSAGE,
+  userMessageForRasterImageStorageError,
+} from "@/utils/avatarUploadLimits";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./authStore";
 
@@ -175,7 +181,8 @@ export const useCorporateStore = create((set, get) => ({
             updated_at,
             slug,
             email,
-            created_by
+            created_by,
+            logo_url
           )
         `
         )
@@ -573,18 +580,23 @@ export const useCorporateStore = create((set, get) => ({
 
       set({ loading: true, error: null });
 
+      const updatePayload = {
+        name: updates.name,
+        industry: updates.industry,
+        size: updates.size,
+        website: updates.website,
+        description: updates.description,
+        address: updates.address,
+        phone: updates.phone,
+        updated_at: new Date().toISOString(),
+      };
+      if (updates.logo_url !== undefined) {
+        updatePayload.logo_url = updates.logo_url;
+      }
+
       const { data: organization, error } = await supabase
         .from("organizations")
-        .update({
-          name: updates.name,
-          industry: updates.industry,
-          size: updates.size,
-          website: updates.website,
-          description: updates.description,
-          address: updates.address,
-          phone: updates.phone,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq("id", currentCompany.id)
         .select()
         .single();
@@ -600,6 +612,73 @@ export const useCorporateStore = create((set, get) => ({
       set({ error: error.message, loading: false });
       toast.error("Failed to update company settings");
       throw error;
+    }
+  },
+
+  uploadCompanyLogo: async (file) => {
+    const { currentCompany } = get();
+    if (!currentCompany?.id) {
+      throw new Error("No current company");
+    }
+    if (!file) {
+      throw new Error("No file selected");
+    }
+
+    const maxBytes = 2 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      throw new Error("Logo must be smaller than 2MB");
+    }
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Please choose an image file");
+    }
+    if (!isAllowedRasterImageType(file.type)) {
+      throw new Error(RASTER_IMAGE_UNSUPPORTED_TYPE_MESSAGE);
+    }
+
+    try {
+      set({ loading: true, error: null });
+
+      const ext = getRasterImageFileExtension(file.type);
+      const path = `${currentCompany.id}/logo-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(STORAGE_BUCKETS.ORGANIZATION_LOGOS)
+        .upload(path, file, {
+          upsert: true,
+          contentType: file.type,
+        });
+
+      if (uploadError) {
+        throw new Error(userMessageForRasterImageStorageError(uploadError.message));
+      }
+
+      const { data: urlData } = supabase.storage
+        .from(STORAGE_BUCKETS.ORGANIZATION_LOGOS)
+        .getPublicUrl(path);
+
+      const publicUrl = urlData.publicUrl;
+
+      const { data: organization, error } = await supabase
+        .from("organizations")
+        .update({
+          logo_url: publicUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentCompany.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set({ currentCompany: organization, loading: false });
+      toast.success("Company logo updated");
+      return publicUrl;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to upload logo";
+      set({ error: message, loading: false });
+      toast.error(message);
+      throw error instanceof Error ? error : new Error(message);
     }
   },
 

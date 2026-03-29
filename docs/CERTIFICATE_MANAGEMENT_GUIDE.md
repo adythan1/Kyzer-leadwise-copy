@@ -16,6 +16,10 @@ A comprehensive certificate management feature that allows admins to upload cert
 - **Download Certificates**: Users can download their certificates as images
 - **Certificate Sharing**: Share certificates with others
 
+### Gallery theme (default)
+
+Generated certificate **images** (preview, download, modal) use the **Gallery** layout by default so they align with the learner **Certificates** page: navy frame (`#0C1C4F`), white inner panel with a large bottom-right corner radius, faint “L” watermark, Leadwise logo (or your uploaded template logo), “Verified certificate of course completion”, bold course title, “Awarded to” + recipient in navy, issue date / certificate ID, and a `#1565FF` accent strip at the bottom. **Classic**, **Modern**, **Elegant**, and **Corporate** themes still use the older centered “Certificate of Completion” canvas layout.
+
 ## 🗄️ Database Setup
 
 ### 1. Run the SQL Schema

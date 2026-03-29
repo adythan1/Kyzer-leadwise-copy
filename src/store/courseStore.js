@@ -373,7 +373,7 @@ const useCourseStore = create((set, get) => ({
 
         // Apply filters
         if (filters.category) {
-          query = query.eq('category', filters.category);
+          query = query.eq('category_id', filters.category);
         }
         if (filters.difficulty) {
           query = query.eq('difficulty_level', filters.difficulty);
@@ -1161,7 +1161,8 @@ const useCourseStore = create((set, get) => ({
             .from(TABLES.CERTIFICATE_TEMPLATES)
             .select('*')
             .order('created_at', { ascending: false }),
-          'fetchCertificateTemplates'
+          'fetchCertificateTemplates',
+          30000
         );
 
         if (error) throw error;
@@ -1299,157 +1300,88 @@ const useCourseStore = create((set, get) => ({
     },
 
     // Generate certificate preview/download with filled placeholders
-    generateCertificatePreview: async (certificateId, theme = 'classic') => {
-      // Import certificate utilities
-      const { 
-        getDefaultPlaceholderPositions, 
-        getFontStyles, 
-        calculateTextLayout,
-        drawCertificateBorder,
-        drawWatermark,
-        drawLogo,
-        sanitizeTemplateUrl,
-        CERTIFICATE_THEMES
-      } = await import('@/utils/certificateUtils');
+    generateCertificatePreview: async (certificateId, theme = 'gallery') => {
+      const { renderCertificateCanvas, createCertificateFilename } = await import('@/utils/certificateUtils');
 
-        let certificate;
+      let certificate;
 
-        // Handle preview mode (certificateId === 'preview')
-        if (certificateId === 'preview') {
-          certificate = {
-            id: 'preview',
-            certificate_data: {
-              user_name: 'John Doe',
-              course_title: 'Sample Course',
-              completion_date: new Date().toLocaleDateString(),
-              certificate_id: 'CERT-PREVIEW-123',
-              instructor_name: 'Jane Smith',
-              organization_name: 'Leadwise Academy'
-            },
-            template: {
-              logo_url: null,
-              logo_position: 'top-left'
-            }
-          };
-        } else {
-          // Get certificate with template data from database
-          const { data: certData, error } = await supabase
-            .from(TABLES.CERTIFICATES)
-            .select(`
+      if (certificateId === 'preview') {
+        certificate = {
+          id: 'preview',
+          certificate_data: {
+            user_name: 'John Doe',
+            course_title: 'Sample Course',
+            completion_date: new Date().toLocaleDateString(),
+            issue_date: new Date().toLocaleDateString(),
+            certificate_id: 'CERT-PREVIEW-123',
+            instructor_name: 'Jane Smith',
+            organization_name: 'Leadwise Academy',
+          },
+          template: {
+            logo_url: null,
+            logo_position: 'top-left',
+            theme: 'gallery',
+          },
+        };
+      } else {
+        const { data: certData, error } = await supabase
+          .from(TABLES.CERTIFICATES)
+          .select(`
               *,
               template:${TABLES.CERTIFICATE_TEMPLATES}(*),
               course:${TABLES.COURSES}(*)
             `)
-            .eq('id', certificateId)
-            .single();
+          .eq('id', certificateId)
+          .single();
 
-          if (error) throw error;
-          certificate = certData;
+        if (error) throw error;
+        certificate = certData;
 
-          // Ensure template object exists
-          if (!certificate.template) {
-            certificate.template = {
-              logo_url: null,
-              logo_position: 'top-left'
-            };
-          }
+        if (!certificate.template) {
+          certificate.template = {
+            logo_url: null,
+            logo_position: 'top-left',
+            theme: 'gallery',
+          };
         }
+      }
 
-        // Generate certificate from scratch on a clean canvas
-        return new Promise((resolve, reject) => {
-          try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+      const resolvedTheme = certificate.template?.theme || theme || 'gallery';
 
-            // Set standard certificate dimensions
-            canvas.width = 800;
-            canvas.height = 600;
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 600;
+      const ctx = canvas.getContext('2d');
 
-            // Create white background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await renderCertificateCanvas(
+        ctx,
+        canvas.width,
+        canvas.height,
+        resolvedTheme,
+        certificate.certificate_data,
+        {
+          logo_url: certificate.template?.logo_url,
+          logo_position: certificate.template?.logo_position || 'top-left',
+        }
+      );
 
-            // Add decorative border and watermark
-            drawCertificateBorder(ctx, canvas.width, canvas.height, theme);
-            drawWatermark(ctx, canvas.width, canvas.height);
-
-            // Add logo if present
-            const sanitizedLogoUrl = certificate.template?.logo_url ? sanitizeTemplateUrl(certificate.template.logo_url) : null;
-            if (sanitizedLogoUrl) {
-              const logoImg = new Image();
-              logoImg.crossOrigin = 'anonymous';
-              logoImg.onload = () => {
-                drawLogo(ctx, logoImg, certificate.template.logo_position || 'top-left', canvas.width, canvas.height);
-              };
-              logoImg.src = sanitizedLogoUrl;
-            }
-
-            const placeholderData = certificate.certificate_data;
-            
-            // Add organization name/header at the top
-            const orgName = placeholderData.organization_name || 'Leadwise Academy';
-            const orgStyles = getFontStyles(theme, 'small');
-            ctx.fillStyle = orgStyles.fillStyle;
-            ctx.textAlign = 'center';
-            ctx.font = `bold ${orgStyles.font.split('px')[0]}px ${orgStyles.font.split('px')[1]}`;
-            ctx.fillText(orgName, canvas.width / 2, canvas.height * 0.12);
-            
-            // Add "Certificate of Completion" title
-            const titleStyles = getFontStyles(theme, 'title');
-            ctx.fillStyle = titleStyles.fillStyle;
-            ctx.textAlign = 'center';
-            ctx.font = titleStyles.font;
-            ctx.fillText('Certificate of Completion', canvas.width / 2, canvas.height * 0.3);
-
-            // Get positioning and render all fields
-            const positions = getDefaultPlaceholderPositions(canvas.width, canvas.height, theme);
-
-            // Render all certificate data fields
-            Object.keys(positions).forEach(placeholder => {
-              // Skip organization_name as it's already rendered at the top
-              if (placeholder === '{{organization_name}}') return;
-              
-              const position = positions[placeholder];
-              const textType = position.textType || 'body';
-              const value = placeholderData[placeholder.replace(/[{}]/g, '')];
-
-              if (value) {
-                // Get theme-specific font styling
-                const fontStyles = getFontStyles(theme, textType);
-                
-                // Apply font styles
-                ctx.fillStyle = fontStyles.fillStyle;
-                ctx.textAlign = fontStyles.textAlign;
-                ctx.font = fontStyles.font;
-                
-                // Calculate text layout for long text
-                const maxWidth = canvas.width * 0.8;
-                const textLayout = calculateTextLayout(value, maxWidth, fontStyles.font);
-                
-                // Draw text with proper line breaks
-                textLayout.lines.forEach((line, index) => {
-                  const y = position.y + (index * textLayout.lineHeight);
-                  ctx.fillText(line, position.x, y);
-                });
-              }
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const filename = createCertificateFilename(
+              certificate.certificate_data?.course_title,
+              certificate.certificate_data?.user_name
+            );
+            resolve({
+              blob,
+              url: URL.createObjectURL(blob),
+              filename,
             });
-
-            // Convert to blob for download
-            canvas.toBlob((blob) => {
-              if (blob) {
-                resolve({
-                  blob,
-                  url: URL.createObjectURL(blob),
-                  filename: `certificate-${certificate.certificate_data.certificate_id}.png`
-                });
-              } else {
-                reject(new Error('Failed to generate certificate image'));
-              }
-            }, 'image/png');
-          } catch (error) {
-            reject(error);
+          } else {
+            reject(new Error('Failed to generate certificate image'));
           }
-        });
+        }, 'image/png');
+      });
     },
 
     // Set current course
@@ -1509,7 +1441,12 @@ const useCourseStore = create((set, get) => ({
           .select(`
             *,
             user:profiles(id, full_name, email),
-            course:${TABLES.COURSES}(id, title, category)
+            course:${TABLES.COURSES}(
+              id,
+              title,
+              category_id,
+              category:${TABLES.COURSE_CATEGORIES}(id, name)
+            )
           `)
           .eq('organization_id', organizationId)
           .order('enrolled_at', { ascending: false });

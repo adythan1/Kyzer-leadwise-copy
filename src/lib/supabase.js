@@ -259,9 +259,7 @@ export const getSession = async (timeoutMs = 5000) => {
 // IMPROVED ERROR HANDLING - Keep your existing logic
 // ==========================================
 
-export const handleSupabaseError = (error, context = '') => {
-  console.error(`Supabase error ${context}:`, error);
-  
+export const handleSupabaseError = (error, _context = '') => {
   if (error?.message?.includes('timeout')) {
     return {
       type: 'TIMEOUT',
