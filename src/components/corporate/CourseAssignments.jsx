@@ -17,12 +17,15 @@ import {
 } from 'lucide-react'
 import { useCorporateStore, useCurrentCompany } from '@/store/corporateStore'
 import { useCourseStore } from '@/store/courseStore'
+import { useAuth } from '@/hooks/auth/useAuth'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import Modal from '@/components/ui/Modal'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function CourseAssignments() {
+  const { user } = useAuth()
   const currentCompany = useCurrentCompany()
   const { 
     courseAssignments,
@@ -95,45 +98,34 @@ export default function CourseAssignments() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Assignments</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.totalAssignments}</p>
-            </div>
-            <BookOpen className="w-8 h-8 text-primary-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Mandatory</p>
-              <p className="text-2xl font-bold text-error-default">{stats.mandatoryAssignments}</p>
-            </div>
-            <AlertCircle className="w-8 h-8 text-error-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Overdue</p>
-              <p className="text-2xl font-bold text-warning-default">{stats.overdueAssignments}</p>
-            </div>
-            <Clock className="w-8 h-8 text-warning-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Completed</p>
-              <p className="text-2xl font-bold text-success-default">{stats.completedAssignments}</p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-success-default" />
-          </div>
-        </Card>
+        <MetricTile
+          title="Total Assignments"
+          value={stats.totalAssignments}
+          variant="blue"
+          icon={BookOpen}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Mandatory"
+          value={stats.mandatoryAssignments}
+          variant="error"
+          icon={AlertCircle}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Overdue"
+          value={stats.overdueAssignments}
+          variant="orange"
+          icon={Clock}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Completed"
+          value={stats.completedAssignments}
+          variant="green"
+          icon={CheckCircle}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Filters and Search */}
@@ -502,18 +494,30 @@ function AssignmentDetailsModal({ assignment, employees, onClose }) {
         {activeTab === 'progress' && (
           <div>
             <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-success-default">12</p>
-                <p className="text-sm text-text-light">Completed</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-warning-default">8</p>
-                <p className="text-sm text-text-light">In Progress</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-text-muted">5</p>
-                <p className="text-sm text-text-light">Not Started</p>
-              </div>
+              <MetricTile
+                layout="stack"
+                title="Completed"
+                value={12}
+                variant="green"
+                icon={CheckCircle}
+                paddingClassName="p-4"
+              />
+              <MetricTile
+                layout="stack"
+                title="In Progress"
+                value={8}
+                variant="orange"
+                icon={Clock}
+                paddingClassName="p-4"
+              />
+              <MetricTile
+                layout="stack"
+                title="Not Started"
+                value={5}
+                variant="slate"
+                icon={Users}
+                paddingClassName="p-4"
+              />
             </div>
             
             <div className="space-y-3">

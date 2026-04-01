@@ -32,6 +32,7 @@ import Modal from "../../components/ui/Modal";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
 import CompanySetup from "../../components/corporate/CompanySetup";
 import PageTitle from "@/components/layout/PageTitle";
+import MetricTile from "@/components/ui/MetricTile";
 import DatabaseDebug from "../../components/corporate/DatabaseDebug";
 import toast from "react-hot-toast";
 import { useCorporateStore, useEmployees, useCurrentCompany, useDepartments, useInvitations } from "../../store/corporateStore";
@@ -497,159 +498,123 @@ const EmployeeManagement = () => {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {activeView === 'employees' ? (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        {activeView === "employees" ? (
           <>
-            <Card key="total-employees" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Total Employees</p>
-                  <p className="text-2xl font-bold text-text-dark">{employees.length}</p>
-                </div>
-                <Users className="w-8 h-8 text-primary-default" />
-              </div>
-            </Card>
-            
-            <Card key="active-employees" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Active</p>
-                  <p className="text-2xl font-bold text-success-default">
-                    {employees.filter(e => e.status === 'active').length}
-                  </p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-success-default" />
-              </div>
-            </Card>
-            
-            <Card key="pending-employees" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Pending</p>
-                  <p className="text-2xl font-bold text-warning-default">
-                    {employees.filter(e => e.status === 'pending').length}
-                  </p>
-                </div>
-                <Clock className="w-8 h-8 text-warning-default" />
-              </div>
-            </Card>
-            
-            <Card key="admin-employees" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Admins</p>
-                  <p className="text-2xl font-bold text-text-medium">
-                    {employees.filter(e => e.role === 'corporate_admin').length}
-                  </p>
-                </div>
-                <Shield className="w-8 h-8 text-text-medium" />
-              </div>
-            </Card>
+            <MetricTile
+              key="total-employees"
+              title="Total Employees"
+              value={employees.length}
+              variant="blue"
+              icon={Users}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="active-employees"
+              title="Active"
+              value={employees.filter((e) => e.status === "active").length}
+              variant="green"
+              icon={CheckCircle}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="pending-employees"
+              title="Pending"
+              value={employees.filter((e) => e.status === "pending").length}
+              variant="orange"
+              icon={Clock}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="admin-employees"
+              title="Admins"
+              value={employees.filter((e) => e.role === "corporate_admin").length}
+              variant="slate"
+              icon={Shield}
+              paddingClassName="p-4"
+            />
           </>
-        ) : activeView === 'invitations' ? (
+        ) : activeView === "invitations" ? (
           <>
-          
-            
-            <Card key="total-invitations" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Total Invitations</p>
-                  <p className="text-2xl font-bold text-text-dark">{invitations.length}</p>
-                </div>
-                <Mail className="w-8 h-8 text-primary-default" />
-              </div>
-            </Card>
-            
-            <Card key="pending-invitations" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Pending</p>
-                  <p className="text-2xl font-bold text-warning-default">
-                    {invitations.filter(inv => inv.status === 'pending').length}
-                  </p>
-                </div>
-                <Clock className="w-8 h-8 text-warning-default" />
-              </div>
-            </Card>
-            
-            <Card key="accepted-invitations" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Accepted</p>
-                  <p className="text-2xl font-bold text-success-default">
-                    {invitations.filter(inv => inv.status === 'accepted').length}
-                  </p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-success-default" />
-              </div>
-            </Card>
-            
-            <Card key="expired-invitations" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Expired</p>
-                  <p className="text-2xl font-bold text-error-default">
-                    {invitations.filter(inv => new Date(inv.expires_at) < new Date()).length}
-                  </p>
-                </div>
-                <XCircle className="w-8 h-8 text-error-default" />
-              </div>
-            </Card>
-
-           
+            <MetricTile
+              key="total-invitations"
+              title="Total Invitations"
+              value={invitations.length}
+              variant="blue"
+              icon={Mail}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="pending-invitations"
+              title="Pending"
+              value={invitations.filter((inv) => inv.status === "pending").length}
+              variant="orange"
+              icon={Clock}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="accepted-invitations"
+              title="Accepted"
+              value={invitations.filter((inv) => inv.status === "accepted").length}
+              variant="green"
+              icon={CheckCircle}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="expired-invitations"
+              title="Expired"
+              value={
+                invitations.filter((inv) => new Date(inv.expires_at) < new Date())
+                  .length
+              }
+              variant="error"
+              icon={XCircle}
+              paddingClassName="p-4"
+            />
           </>
-        ) : activeView === 'departments' ? (
+        ) : activeView === "departments" ? (
           <>
-            <Card key="total-departments" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Total Departments</p>
-                  <p className="text-2xl font-bold text-text-dark">{departments.length}</p>
-                </div>
-                <Shield className="w-8 h-8 text-primary-default" />
-              </div>
-            </Card>
-            
-            <Card key="departments-with-managers" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">With Managers</p>
-                  <p className="text-2xl font-bold text-success-default">
-                    {departments.filter(dept => dept.manager_id).length}
-                  </p>
-                </div>
-                <UserCog className="w-8 h-8 text-success-default" />
-              </div>
-            </Card>
-            
-            <Card key="departments-with-employees" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">With Employees</p>
-                  <p className="text-2xl font-bold text-warning-default">
-                    {departments.filter(dept => 
-                      employees.some(emp => emp.department_id === dept.id)
-                    ).length}
-                  </p>
-                </div>
-                <Users className="w-8 h-8 text-warning-default" />
-              </div>
-            </Card>
-            
-            <Card key="empty-departments" className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-text-light">Empty Departments</p>
-                  <p className="text-2xl font-bold text-text-medium">
-                    {departments.filter(dept => 
-                      !employees.some(emp => emp.department_id === dept.id)
-                    ).length}
-                  </p>
-                </div>
-                <AlertCircle className="w-8 h-8 text-text-medium" />
-              </div>
-            </Card>
+            <MetricTile
+              key="total-departments"
+              title="Total Departments"
+              value={departments.length}
+              variant="blue"
+              icon={Shield}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="departments-with-managers"
+              title="With Managers"
+              value={departments.filter((dept) => dept.manager_id).length}
+              variant="green"
+              icon={UserCog}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="departments-with-employees"
+              title="With Employees"
+              value={
+                departments.filter((dept) =>
+                  employees.some((emp) => emp.department_id === dept.id),
+                ).length
+              }
+              variant="orange"
+              icon={Users}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              key="empty-departments"
+              title="Empty Departments"
+              value={
+                departments.filter(
+                  (dept) =>
+                    !employees.some((emp) => emp.department_id === dept.id),
+                ).length
+              }
+              variant="slate"
+              icon={AlertCircle}
+              paddingClassName="p-4"
+            />
           </>
         ) : null}
       </div>

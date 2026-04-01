@@ -25,6 +25,7 @@ import {
 import { useCorporateStore, useDepartments, useInvitations } from '@/store/corporateStore'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import Modal from '@/components/ui/Modal'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import CreateUserDirectModal from './CreateUserDirectModal'
@@ -233,53 +234,35 @@ export default function UserInvitation() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Invitations</p>
-              <p className="text-2xl font-bold text-text-dark">{invitations.length}</p>
-            </div>
-            <Mail className="w-8 h-8 text-primary-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Pending</p>
-              <p className="text-2xl font-bold text-warning-default">
-                {invitations.filter(inv => inv.status === 'pending' && !isExpired(inv.expires_at)).length}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-warning-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Accepted</p>
-              <p className="text-2xl font-bold text-success-default">
-                {invitations.filter(inv => inv.status === 'accepted').length}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-success-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Expired</p>
-              <p className="text-2xl font-bold text-error-default">
-                {invitations.filter(inv => isExpired(inv.expires_at)).length}
-              </p>
-            </div>
-            <XCircle className="w-8 h-8 text-error-default" />
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <MetricTile
+          title="Total Invitations"
+          value={invitations.length}
+          variant="blue"
+          icon={Mail}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Pending"
+          value={invitations.filter((inv) => inv.status === 'pending' && !isExpired(inv.expires_at)).length}
+          variant="orange"
+          icon={Clock}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Accepted"
+          value={invitations.filter((inv) => inv.status === 'accepted').length}
+          variant="green"
+          icon={CheckCircle}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Expired"
+          value={invitations.filter((inv) => isExpired(inv.expires_at)).length}
+          variant="error"
+          icon={XCircle}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Filters and Search */}

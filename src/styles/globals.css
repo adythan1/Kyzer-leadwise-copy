@@ -122,6 +122,91 @@ body {
     opacity: 0.2;
   }
 
+  /* Dashboard / metric tile accents — use themes.css variables so corporate, nature, dark, etc. stay cohesive */
+  .bg-metric-accent-primary-bar {
+    background-color: var(--color-primary);
+  }
+
+  .bg-metric-accent-primary-icon {
+    background-color: var(--color-primary-light);
+  }
+
+  .text-metric-accent-primary-icon {
+    color: var(--color-primary-dark);
+  }
+
+  .bg-metric-accent-primary-alt-bar {
+    background-color: var(--color-primary-dark);
+  }
+
+  .bg-metric-accent-primary-alt-icon {
+    background-color: var(--color-primary-light);
+  }
+
+  .text-metric-accent-primary-alt-icon {
+    color: var(--color-primary);
+  }
+
+  .bg-metric-accent-success-bar {
+    background-color: var(--color-success);
+  }
+
+  .bg-metric-accent-success-icon {
+    background-color: var(--color-success-light);
+  }
+
+  .text-metric-accent-success-icon {
+    color: var(--color-success-dark);
+  }
+
+  .bg-metric-accent-success-deep-bar {
+    background-color: var(--color-success-dark);
+  }
+
+  .bg-metric-accent-success-deep-icon {
+    background-color: var(--color-success-light);
+  }
+
+  .text-metric-accent-success-deep-icon {
+    color: var(--color-success-dark);
+  }
+
+  .bg-metric-accent-warning-bar {
+    background-color: var(--color-warning);
+  }
+
+  .bg-metric-accent-warning-icon {
+    background-color: var(--color-warning-light);
+  }
+
+  .text-metric-accent-warning-icon {
+    color: var(--color-warning-dark);
+  }
+
+  .bg-metric-accent-error-bar {
+    background-color: var(--color-error);
+  }
+
+  .bg-metric-accent-error-icon {
+    background-color: var(--color-error-light);
+  }
+
+  .text-metric-accent-error-icon {
+    color: var(--color-error-dark);
+  }
+
+  .bg-metric-accent-neutral-bar {
+    background-color: var(--color-border);
+  }
+
+  .bg-metric-accent-neutral-icon {
+    background-color: var(--color-background-medium);
+  }
+
+  .text-metric-accent-neutral-icon {
+    color: var(--color-text-medium);
+  }
+
 }
 
 /* Component Styles */

@@ -22,3 +22,10 @@ export { default as FormSection } from './FormSection';
 export { default as EmptyState } from './EmptyState';
 export { default as StatusBadge } from './StatusBadge';
 export { default as ActionButton } from './ActionButton';
+export { default as BrandAccentCard } from './BrandAccentCard';
+export { default as MetricTile } from './MetricTile';
+export {
+  BrandAccentIconFrame,
+  getDashboardAccent,
+  DASHBOARD_ACCENT_VARIANTS,
+} from './BrandAccentCard';

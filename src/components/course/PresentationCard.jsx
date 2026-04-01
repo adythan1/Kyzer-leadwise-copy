@@ -7,10 +7,12 @@ import {
   Settings,
   Grid3X3,
   Clock,
-  PlayCircle
+  PlayCircle,
+  LayoutGrid,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import PresentationThumbnail from './PresentationThumbnail';
 
 const PresentationCard = ({
@@ -166,24 +168,34 @@ const PresentationCard = ({
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-blue-600">{slideCount}</div>
-                <div className="text-sm text-gray-600">Total Slides</div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-green-600">
-                  {presentation.estimated_duration || '~'}
-                </div>
-                <div className="text-sm text-gray-600">Minutes</div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-purple-600">
-                  {presentation.slides?.filter(slide => slide.content_type === 'quiz').length || 0}
-                </div>
-                <div className="text-sm text-gray-600">Quiz Slides</div>
-              </div>
+              <MetricTile
+                layout="stack"
+                title="Total Slides"
+                value={slideCount}
+                variant="blue"
+                icon={LayoutGrid}
+                paddingClassName="p-3"
+              />
+              <MetricTile
+                layout="stack"
+                title="Minutes"
+                value={presentation.estimated_duration || '~'}
+                variant="green"
+                icon={Clock}
+                paddingClassName="p-3"
+              />
+              <MetricTile
+                layout="stack"
+                title="Quiz Slides"
+                value={
+                  presentation.slides?.filter(
+                    (slide) => slide.content_type === 'quiz'
+                  ).length || 0
+                }
+                variant="purple"
+                icon={Grid3X3}
+                paddingClassName="p-3"
+              />
             </div>
 
             {/* Action Buttons */}

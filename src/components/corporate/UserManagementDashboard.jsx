@@ -18,6 +18,7 @@ import { useCorporateStore, useCurrentCompany, useEmployees, useDepartments, use
 import { supabase } from '@/lib/supabase'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
 
@@ -556,71 +557,41 @@ function OverviewTab({ stats, onTabChange, exportHandlerRef }) {
         </Card>
       )}
       
-      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Employees</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.totalEmployees}</p>
-              {stats.totalEmployees > 0 ? (
-                <p className="text-sm text-success-default">
-                  {stats.activeEmployees} active
-                </p>
-              ) : (
-                <p className="text-sm text-text-light">No employees yet</p>
-              )}
-            </div>
-            <div className="p-3 bg-primary-light rounded-lg">
-              <Users className="w-6 h-6 text-primary-default" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Departments</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.totalDepartments}</p>
-              <p className="text-sm text-text-light">
-                {stats.departmentsWithManagers} with managers
-              </p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Building2 className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Pending Invitations</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.pendingInvitations}</p>
-              <p className="text-sm text-warning-default">
-                Awaiting response
-              </p>
-            </div>
-            <div className="p-3 bg-warning-light rounded-lg">
-              <UserPlus className="w-6 h-6 text-warning-default" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Inactive Users</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.inactiveEmployees}</p>
-              <p className="text-sm text-error-default">
-                Need attention
-              </p>
-            </div>
-            <div className="p-3 bg-error-light rounded-lg">
-              <Activity className="w-6 h-6 text-error-default" />
-            </div>
-          </div>
-        </Card>
+        <MetricTile
+          title="Total Employees"
+          value={stats.totalEmployees}
+          variant="blue"
+          icon={Users}
+          footer={
+            stats.totalEmployees > 0 ? (
+              <span className="text-success-default">{stats.activeEmployees} active</span>
+            ) : (
+              <span>No employees yet</span>
+            )
+          }
+        />
+        <MetricTile
+          title="Departments"
+          value={stats.totalDepartments}
+          variant="purple"
+          icon={Building2}
+          footer={<span>{stats.departmentsWithManagers} with managers</span>}
+        />
+        <MetricTile
+          title="Pending Invitations"
+          value={stats.pendingInvitations}
+          variant="orange"
+          icon={UserPlus}
+          footer={<span className="text-warning-default">Awaiting response</span>}
+        />
+        <MetricTile
+          title="Inactive Users"
+          value={stats.inactiveEmployees}
+          variant="error"
+          icon={Activity}
+          footer={<span className="text-error-default">Need attention</span>}
+        />
       </div>
 
       {/* Department Performance */}

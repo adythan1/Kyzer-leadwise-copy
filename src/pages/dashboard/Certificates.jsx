@@ -1,6 +1,7 @@
 // src/pages/dashboard/Certificates.jsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { Award, BookOpen, Calendar, Search } from 'lucide-react';
@@ -172,32 +173,25 @@ export default function Certificates() {
         subtitle="Your achievements and completed courses"
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-        <Card className="p-5 border-border shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <Award className="w-6 h-6 text-emerald-700" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Total certificates</p>
-              <p className="text-2xl font-bold text-text-dark">{certificates.length}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-5 border-border shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-[#F7841C]" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Most recent</p>
-              <p className="text-base font-semibold text-text-dark">
-                {latestIssuedLabel || '—'}
-              </p>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 max-w-3xl sm:grid-cols-2">
+        <MetricTile
+          title="Total certificates"
+          value={certificates.length}
+          variant="emerald"
+          icon={Award}
+          paddingClassName="p-5"
+        />
+        <MetricTile
+          title="Most recent"
+          value={
+            <span className="text-base font-semibold text-text-dark">
+              {latestIssuedLabel || '—'}
+            </span>
+          }
+          variant="orange"
+          icon={Calendar}
+          paddingClassName="p-5"
+        />
       </div>
 
       <Card className="p-4 sm:p-5 border-border shadow-sm">

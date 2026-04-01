@@ -1,6 +1,7 @@
 // src/pages/dashboard/Progress.jsx - Fixed loading states
 import { useState, useEffect } from 'react';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import PageTitle from '@/components/layout/PageTitle';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ProgressChart from '@/components/dashboard/ProgressChart';
@@ -224,55 +225,31 @@ export default function Progress() {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary-light rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-default" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Total Courses</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.totalCourses}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Award className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Completed</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.completedCourses}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">In Progress</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.inProgressCourses}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-text-light">Total Hours</p>
-              <p className="text-2xl font-bold text-text-dark">{stats.totalHours}h</p>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <MetricTile
+          title="Total Courses"
+          value={stats.totalCourses}
+          variant="blue"
+          icon={BookOpen}
+        />
+        <MetricTile
+          title="Completed"
+          value={stats.completedCourses}
+          variant="green"
+          icon={Award}
+        />
+        <MetricTile
+          title="In Progress"
+          value={stats.inProgressCourses}
+          variant="orange"
+          icon={TrendingUp}
+        />
+        <MetricTile
+          title="Total Hours"
+          value={`${stats.totalHours}h`}
+          variant="purple"
+          icon={Clock}
+        />
       </div>
 
       {/* Content based on data availability */}

@@ -16,6 +16,7 @@ import {
 import { useCorporateStore, useCurrentCompany, useCompanyStats } from '@/store/corporateStore'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
 export default function CompanyReports() {
@@ -358,46 +359,46 @@ function CourseAnalyticsReport({ assignments }) {
     }
   }))
 
+  const avgCompletion =
+    courseStats.length > 0
+      ? Math.round(
+          courseStats.reduce((acc, course) => acc + course.completionRate(), 0) /
+            courseStats.length
+        )
+      : 0
+  const avgTime =
+    courseStats.length > 0
+      ? Math.round(
+          courseStats.reduce((acc, course) => acc + course.averageTime, 0) /
+            courseStats.length
+        )
+      : 0
+
   return (
     <div className="space-y-6">
       {/* Course Performance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Courses</p>
-              <p className="text-2xl font-bold text-text-dark">{assignments.length}</p>
-              <p className="text-sm text-success-default">+2 this month</p>
-            </div>
-            <BookOpen className="w-8 h-8 text-primary-default" />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Avg Completion Rate</p>
-              <p className="text-2xl font-bold text-text-dark">
-                {Math.round(courseStats.reduce((acc, course) => acc + course.completionRate(), 0) / courseStats.length) || 0}%
-              </p>
-              <p className="text-sm text-success-default">+5% vs last month</p>
-            </div>
-            <Target className="w-8 h-8 text-success-default" />
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Avg Time to Complete</p>
-              <p className="text-2xl font-bold text-text-dark">
-                {Math.round(courseStats.reduce((acc, course) => acc + course.averageTime, 0) / courseStats.length) || 0}m
-              </p>
-              <p className="text-sm text-warning-default">-10m vs last month</p>
-            </div>
-            <Clock className="w-8 h-8 text-warning-default" />
-          </div>
-        </Card>
+        <MetricTile
+          title="Total Courses"
+          value={assignments.length}
+          variant="blue"
+          icon={BookOpen}
+          footer={<span className="text-success-default">+2 this month</span>}
+        />
+        <MetricTile
+          title="Avg Completion Rate"
+          value={`${avgCompletion}%`}
+          variant="green"
+          icon={Target}
+          footer={<span className="text-success-default">+5% vs last month</span>}
+        />
+        <MetricTile
+          title="Avg Time to Complete"
+          value={`${avgTime}m`}
+          variant="orange"
+          icon={Clock}
+          footer={<span className="text-warning-default">-10m vs last month</span>}
+        />
       </div>
 
       {/* Course Performance Table */}
@@ -466,33 +467,46 @@ function CourseAnalyticsReport({ assignments }) {
 }
 
 // Metric Card Component
-function MetricCard({ title, value, subtitle, icon: Icon, color, trend }) {
-  const colorClasses = {
-    primary: 'text-primary-default',
-    success: 'text-success-default',
-    warning: 'text-warning-default',
-    error: 'text-error-default'
+function MetricCard({ title, icon: Icon, subtitle, color, trend, value }) {
+  const variantByColor = {
+    primary: 'blue',
+    success: 'green',
+    warning: 'orange',
+    error: 'error',
   }
+  const variant = variantByColor[color] ?? 'blue'
+  const hasFooter = Boolean(subtitle || trend)
+
+  const footer = hasFooter ? (
+    <div className="space-y-1">
+      {subtitle ? (
+        <p className="text-sm text-text-light">{subtitle}</p>
+      ) : null}
+      {trend ? (
+        <div
+          className={`flex items-center gap-1 text-xs ${
+            trend.direction === 'up' ? 'text-success-default' : 'text-error-default'
+          }`}
+        >
+          <TrendingUp
+            className={`w-3 h-3 shrink-0 ${
+              trend.direction === 'down' ? 'rotate-180' : ''
+            }`}
+          />
+          <span>{trend.value}% vs last period</span>
+        </div>
+      ) : null}
+    </div>
+  ) : null
 
   return (
-    <Card className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-text-light">{title}</p>
-          <p className="text-2xl font-bold text-text-dark mt-1">{value}</p>
-          <p className="text-sm text-text-light mt-1">{subtitle}</p>
-          {trend && (
-            <div className={`flex items-center gap-1 mt-2 ${
-              trend.direction === 'up' ? 'text-success-default' : 'text-error-default'
-            }`}>
-              <TrendingUp className={`w-3 h-3 ${trend.direction === 'down' ? 'rotate-180' : ''}`} />
-              <span className="text-xs">{trend.value}% vs last period</span>
-            </div>
-          )}
-        </div>
-        <Icon className={`w-8 h-8 ${colorClasses[color]}`} />
-      </div>
-    </Card>
+    <MetricTile
+      title={title}
+      value={value}
+      variant={variant}
+      icon={Icon}
+      footer={footer}
+    />
   )
 }
 

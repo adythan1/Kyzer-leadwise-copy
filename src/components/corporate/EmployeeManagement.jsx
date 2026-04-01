@@ -28,6 +28,7 @@ import { useCorporatePermissions } from '@/hooks/corporate/useCorporatePermissio
 import { useAuthStore } from '@/store/authStore'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import Modal from '@/components/ui/Modal'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import toast from 'react-hot-toast'
@@ -116,53 +117,39 @@ export default function EmployeeManagement() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Employees</p>
-              <p className="text-2xl font-bold text-text-dark">{employees.length}</p>
-            </div>
-            <Users className="w-8 h-8 text-primary-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Active</p>
-              <p className="text-2xl font-bold text-success-default">
-                {employees.filter(e => e.status === 'active').length}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-success-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Pending</p>
-              <p className="text-2xl font-bold text-warning-default">
-                {employees.filter(e => e.status === 'pending').length}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-warning-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Invitations</p>
-              <p className="text-2xl font-bold text-text-medium">
-                {invitations?.filter(inv => !inv.used_at && new Date(inv.expires_at) > new Date()).length || 0}
-              </p>
-            </div>
-            <Mail className="w-8 h-8 text-text-medium" />
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <MetricTile
+          title="Total Employees"
+          value={employees.length}
+          variant="blue"
+          icon={Users}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Active"
+          value={employees.filter((e) => e.status === 'active').length}
+          variant="green"
+          icon={CheckCircle}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Pending"
+          value={employees.filter((e) => e.status === 'pending').length}
+          variant="orange"
+          icon={Clock}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Invitations"
+          value={
+            invitations?.filter(
+              (inv) => !inv.used_at && new Date(inv.expires_at) > new Date(),
+            ).length || 0
+          }
+          variant="slate"
+          icon={Mail}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Filters and Search */}

@@ -11,12 +11,14 @@ import {
   Target,
   BarChart3,
   PieChart,
-  LineChart,
   Eye,
   FileText,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import MetricTile from "@/components/ui/MetricTile";
 import { useCorporateStore } from "@/store/corporateStore";
 import { useCorporate } from "@/hooks/corporate/useCorporate";
 import { supabase, TABLES } from "@/lib/supabase";
@@ -760,8 +762,8 @@ const Reports = () => {
         encodeURIComponent("Mock report data");
       element.download = filename;
       element.click();
-    } catch (error) {
-      console.error("Export failed:", error);
+    } catch {
+      return;
     }
   };
 
@@ -769,48 +771,54 @@ const Reports = () => {
     <div className="space-y-6">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="card text-center">
-          <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.totalEmployees}
-          </div>
-          <div className="text-sm text-text-medium">Total Employees</div>
-        </div>
-        <div className="card text-center">
-          <Target className="h-8 w-8 text-green-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.coursesCompleted}
-          </div>
-          <div className="text-sm text-text-medium">Courses Completed</div>
-        </div>
-        <div className="card text-center">
-          <Clock className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.totalHours?.toLocaleString()}
-          </div>
-          <div className="text-sm text-text-medium">Total Hours</div>
-        </div>
-        <div className="card text-center">
-          <Award className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.certificates}
-          </div>
-          <div className="text-sm text-text-medium">Certificates</div>
-        </div>
-        <div className="card text-center">
-          <TrendingUp className="h-8 w-8 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.averageCompletion}%
-          </div>
-          <div className="text-sm text-text-medium">Avg. Completion</div>
-        </div>
-        <div className="card text-center">
-          <BookOpen className="h-8 w-8 text-indigo-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.activeEmployees}
-          </div>
-          <div className="text-sm text-text-medium">Active Learners</div>
-        </div>
+        <MetricTile
+          layout="stack"
+          title="Total Employees"
+          value={reportData?.totalEmployees}
+          variant="blue"
+          icon={Users}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Courses Completed"
+          value={reportData?.coursesCompleted}
+          variant="green"
+          icon={Target}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Total Hours"
+          value={reportData?.totalHours?.toLocaleString()}
+          variant="purple"
+          icon={Clock}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Certificates"
+          value={reportData?.certificates}
+          variant="orange"
+          icon={Award}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Avg. Completion"
+          value={`${reportData?.averageCompletion ?? 0}%`}
+          variant="emerald"
+          icon={TrendingUp}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Active Learners"
+          value={reportData?.activeEmployees}
+          variant="slate"
+          icon={BookOpen}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Department Performance */}
@@ -977,30 +985,38 @@ const Reports = () => {
     <div className="space-y-6">
       {/* Progress Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {reportData?.inProgress}
-          </div>
-          <div className="text-sm text-text-medium">In Progress</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {reportData?.completed}
-          </div>
-          <div className="text-sm text-text-medium">Completed</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-gray-600">
-            {reportData?.notStarted}
-          </div>
-          <div className="text-sm text-text-medium">Not Started</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-red-600">
-            {reportData?.overdue}
-          </div>
-          <div className="text-sm text-text-medium">Overdue</div>
-        </div>
+        <MetricTile
+          layout="stack"
+          title="In Progress"
+          value={reportData?.inProgress}
+          variant="blue"
+          icon={Clock}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Completed"
+          value={reportData?.completed}
+          variant="green"
+          icon={Award}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Not Started"
+          value={reportData?.notStarted}
+          variant="slate"
+          icon={BookOpen}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Overdue"
+          value={reportData?.overdue}
+          variant="error"
+          icon={AlertCircle}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Weekly Progress */}
@@ -1079,30 +1095,38 @@ const Reports = () => {
     <div className="space-y-6">
       {/* Completion Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.totalAssignments}
-          </div>
-          <div className="text-sm text-text-medium">Total Assignments</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {reportData?.completed}
-          </div>
-          <div className="text-sm text-text-medium">Completed</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-primary">
-            {reportData?.completionRate}%
-          </div>
-          <div className="text-sm text-text-medium">Completion Rate</div>
-        </div>
-        <div className="card text-center">
-          <div className="text-2xl font-bold text-text-dark">
-            {reportData?.averageTimeToComplete}
-          </div>
-          <div className="text-sm text-text-medium">Avg. Days to Complete</div>
-        </div>
+        <MetricTile
+          layout="stack"
+          title="Total Assignments"
+          value={reportData?.totalAssignments}
+          variant="blue"
+          icon={FileText}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Completed"
+          value={reportData?.completed}
+          variant="green"
+          icon={CheckCircle}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Completion Rate"
+          value={`${reportData?.completionRate ?? 0}%`}
+          variant="purple"
+          icon={PieChart}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          layout="stack"
+          title="Avg. Days to Complete"
+          value={reportData?.averageTimeToComplete}
+          variant="slate"
+          icon={Calendar}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Course Completion Rates */}

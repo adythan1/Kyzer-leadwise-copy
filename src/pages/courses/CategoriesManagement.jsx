@@ -17,10 +17,14 @@ import {
   DollarSign,
   Megaphone,
   Users,
-  Globe
+  Globe,
+  CheckCircle,
+  CircleOff,
+  Sparkles,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import CategoryForm from '@/components/course/CategoryForm';
 import { useToast } from '@/components/ui';
@@ -127,64 +131,42 @@ export default function CategoriesManagement() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Categories</p>
-              <p className="text-2xl font-bold text-gray-900">{categories?.length || 0}</p>
-            </div>
-            <BookOpen className="w-8 h-8 text-blue-500" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active</p>
-              <p className="text-2xl font-bold text-green-600">
-                {categories?.filter(c => c.is_active).length || 0}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Inactive</p>
-              <p className="text-2xl font-bold text-gray-600">
-                {categories?.filter(c => !c.is_active).length || 0}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-              <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Recently Added</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {categories?.filter(c => {
-                  const createdDate = new Date(c.created_at);
-                  const weekAgo = new Date();
-                  weekAgo.setDate(weekAgo.getDate() - 7);
-                  return createdDate > weekAgo;
-                }).length || 0}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-            </div>
-          </div>
-        </Card>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <MetricTile
+          title="Total Categories"
+          value={categories?.length || 0}
+          variant="blue"
+          icon={BookOpen}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Active"
+          value={categories?.filter((c) => c.is_active).length || 0}
+          variant="green"
+          icon={CheckCircle}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Inactive"
+          value={categories?.filter((c) => !c.is_active).length || 0}
+          variant="slate"
+          icon={CircleOff}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Recently Added"
+          value={
+            categories?.filter((c) => {
+              const createdDate = new Date(c.created_at);
+              const weekAgo = new Date();
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              return createdDate > weekAgo;
+            }).length || 0
+          }
+          variant="purple"
+          icon={Sparkles}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Filters */}

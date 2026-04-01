@@ -14,6 +14,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import PageTitle from '@/components/layout/PageTitle';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -317,34 +318,40 @@ const Activity = () => {
 
         {/* Activity Summary */}
         {filterActivities.length > 0 && (
-          <Card className="mt-8 p-6 bg-primary-light">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-primary">
-                  {filterActivities.filter(a => a.type === 'course_started').length}
-                </div>
-                <div className="text-sm text-text-medium">Courses Started</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-success-default">
-                  {filterActivities.filter(a => a.type === 'course_completed').length}
-                </div>
-                <div className="text-sm text-text-medium">Courses Completed</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-warning-default">
-                  {filterActivities.filter(a => a.type === 'lesson_completed').length}
-                </div>
-                <div className="text-sm text-text-medium">Lessons Completed</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-success-default">
-                  {filterActivities.filter(a => a.type === 'certificate_earned').length}
-                </div>
-                <div className="text-sm text-text-medium">Certificates</div>
-              </div>
-            </div>
-          </Card>
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <MetricTile
+              layout="stack"
+              variant="blue"
+              icon={Play}
+              title="Courses Started"
+              value={filterActivities.filter((a) => a.type === 'course_started').length}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              layout="stack"
+              variant="green"
+              icon={CheckCircle}
+              title="Courses Completed"
+              value={filterActivities.filter((a) => a.type === 'course_completed').length}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              layout="stack"
+              variant="orange"
+              icon={BookOpen}
+              title="Lessons Completed"
+              value={filterActivities.filter((a) => a.type === 'lesson_completed').length}
+              paddingClassName="p-4"
+            />
+            <MetricTile
+              layout="stack"
+              variant="green"
+              icon={Award}
+              title="Certificates"
+              value={filterActivities.filter((a) => a.type === 'certificate_earned').length}
+              paddingClassName="p-4"
+            />
+          </div>
         )}
       </div>
     </div>

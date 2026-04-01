@@ -17,6 +17,7 @@ import {
 import { useCorporateStore, useDepartments, useCurrentCompany, useEmployees } from '@/store/corporateStore'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
+import MetricTile from '@/components/ui/MetricTile'
 import Modal from '@/components/ui/Modal'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 
@@ -116,39 +117,27 @@ export default function DepartmentManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Total Departments</p>
-              <p className="text-2xl font-bold text-text-dark">{departments.length}</p>
-            </div>
-            <Building2 className="w-8 h-8 text-primary-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">With Managers</p>
-              <p className="text-2xl font-bold text-success-default">
-                {departments.filter(d => d.manager_id).length}
-              </p>
-            </div>
-            <UserCheck className="w-8 h-8 text-success-default" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-text-light">Without Managers</p>
-              <p className="text-2xl font-bold text-warning-default">
-                {departments.filter(d => !d.manager_id).length}
-              </p>
-            </div>
-            <AlertCircle className="w-8 h-8 text-warning-default" />
-          </div>
-        </Card>
+        <MetricTile
+          title="Total Departments"
+          value={departments.length}
+          variant="blue"
+          icon={Building2}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="With Managers"
+          value={departments.filter((d) => d.manager_id).length}
+          variant="green"
+          icon={UserCheck}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Without Managers"
+          value={departments.filter((d) => !d.manager_id).length}
+          variant="orange"
+          icon={AlertCircle}
+          paddingClassName="p-4"
+        />
       </div>
 
       {/* Filters and Search */}

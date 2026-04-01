@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import MetricTile from '@/components/ui/MetricTile';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import PageTitle from '@/components/layout/PageTitle';
 import CourseForm from '@/components/course/CourseForm';
@@ -513,63 +514,44 @@ export default function CourseManagement() {
           </div>
         </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Courses</p>
-              <p className="text-2xl font-bold text-gray-900">{courses?.length || 0}</p>
-            </div>
-            <BookOpen className="w-8 h-8 text-blue-500" />
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Published</p>
-              <p className="text-2xl font-bold text-green-600">
-                {courses?.filter(c => c.is_published).length || 0}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-              <Eye className="w-4 h-4 text-green-500" />
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Draft</p>
-              <p className="text-2xl font-bold text-orange-600">
-                {courses?.filter(c => !c.is_published).length || 0}
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-              <EyeOff className="w-4 h-4 text-orange-500" />
-            </div>
-          </div>
-        </Card>
-        
-        <Card
-          className="p-4 cursor-pointer hover:ring-2 hover:ring-emerald-300 transition-all"
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <MetricTile
+          title="Total Courses"
+          value={courses?.length || 0}
+          variant="blue"
+          icon={BookOpen}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Published"
+          value={courses?.filter((c) => c.is_published).length || 0}
+          variant="green"
+          icon={Eye}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Draft"
+          value={courses?.filter((c) => !c.is_published).length || 0}
+          variant="orange"
+          icon={EyeOff}
+          paddingClassName="p-4"
+        />
+        <MetricTile
+          title="Free Trial Package"
+          value={
+            <span className="inline-flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-text-dark">
+                {courses?.filter((c) => c.is_free_trial).length || 0}
+              </span>
+              <span className="text-sm font-normal text-text-muted">/ 5</span>
+            </span>
+          }
+          variant="emerald"
+          icon={Gift}
+          paddingClassName="p-4"
           onClick={() => setShowFreeTrialManager(!showFreeTrialManager)}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Free Trial Package</p>
-              <p className="text-2xl font-bold text-emerald-600">
-                {courses?.filter(c => c.is_free_trial).length || 0}
-                <span className="text-sm font-normal text-gray-400"> / 5</span>
-              </p>
-            </div>
-            <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <Gift className="w-4 h-4 text-emerald-500" />
-            </div>
-          </div>
-        </Card>
+          className="cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-emerald-300/80"
+        />
       </div>
 
       {/* Free Trial Package Manager */}
