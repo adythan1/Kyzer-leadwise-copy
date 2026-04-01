@@ -20,7 +20,7 @@ export default function ShareCourseModal({ isOpen, onClose, course }) {
 
   if (!course) return null
 
-  const courseUrl = `${window.location.origin}/app/courses/${course.id}`
+  const courseUrl = `${window.location.origin}/share/course/${course.id}`
   const shareText = `Check out this course: ${course.title}`
   const shareTitle = course.title
   const shareDescription = course.description || course.subtitle || ''
@@ -31,7 +31,7 @@ export default function ShareCourseModal({ isOpen, onClose, course }) {
       setCopied(true)
       success('Link copied to clipboard!')
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
+    } catch {
       showError('Failed to copy link')
     }
   }
@@ -39,11 +39,12 @@ export default function ShareCourseModal({ isOpen, onClose, course }) {
   const handleNativeShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: courseUrl
-        })
+        const payload = { title: shareTitle, url: courseUrl }
+        if (navigator.canShare && !navigator.canShare(payload)) {
+          handleCopyLink()
+          return
+        }
+        await navigator.share(payload)
         success('Course shared successfully!')
       } catch (err) {
         if (err.name !== 'AbortError') {

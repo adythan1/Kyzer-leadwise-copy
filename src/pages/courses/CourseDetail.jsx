@@ -620,16 +620,16 @@ export default function CourseDetail() {
             </div>
           </div>
 
-          {/* Enrollment Card */}
+          {/* Enrollment Card — light frosted glass (hero is always dark; same treatment in dark UI for readability) */}
           <div className="lg:col-span-1">
-            <Card className="p-6 bg-white text-text-dark">
+            <Card className="p-6 text-white-900 !bg-white/40 dark:!bg-white/[0.1] backdrop-blur-2xl saturate-120 !border-white/50 dark:!border-white/40 shadow-xl ring-1 ring-black/10 [text-shadow:0_1px_0_rgba(255,255,255,0.25)]">
               <div className="text-center mb-8">
               
                 
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-2xl font-bold">${course.price || 'Free'}</span>
+                  <span className="text-2xl font-bold text-white-200 tabular-nums">${course.price || 'Free'}</span>
                   {course.originalPrice && (
-                    <span className="text-lg text-text-muted line-through">${course.originalPrice}</span>
+                    <span className="text-lg text-gray-600 line-through">${course.originalPrice}</span>
                   )}
                 </div>
                 
@@ -719,8 +719,8 @@ export default function CourseDetail() {
                           {lessons.length === 0 ? 'Loading...' : 'No Lessons Available'}
                         </Button>
                       )}
-                      <div className="text-center text-sm text-success-default">
-                        ✓ You're enrolled in this course
+                      <div className="text-center text-sm font-semibold text-emerald-900 dark:text-white-850">
+                        ✓ You&apos;re enrolled in this course
                       </div>
                     </div>
                   );
@@ -749,18 +749,12 @@ export default function CourseDetail() {
                 </div>
               )} */}
 
-              <div className="mt-6 space-y-2 text-sm text-text-medium">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-success-default" />
-                  <span>30-day money-back guarantee</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-success-default" />
-                  <span>Mobile and TV access</span>
-                </div>
+              <div className="mt-6 space-y-2.5 text-sm text-gray-900 font-medium leading-snug">
+               
+             
                 {canAccessCertificates(course) && (
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-success-default" />
+                  <div className="flex items-start gap-2">
+                    <Award className="w-4 h-4  shrink-0 mt-0.5" aria-hidden />
                     <span>Certificate of completion</span>
                   </div>
                 )}

@@ -66,11 +66,11 @@ export default function CertificatePreviewModal({
 
         // Generate preview with error handling
         try {
-          const { blob, url } = await actions.generateCertificatePreview(userCertificate.id);
+          const { url } = await actions.generateCertificatePreview(userCertificate.id);
           if (url) {
             setPreviewUrl(url);
           }
-        } catch (previewError) {
+        } catch {
           setError('Unable to generate certificate preview. You can still download the certificate.');
         }
       } else {
@@ -151,7 +151,6 @@ export default function CertificatePreviewModal({
 
       const sharePayload = {
         title: `${courseName} Certificate`,
-        text: `I completed ${courseName} and earned my certificate!`,
         url: shareUrl,
       };
 
@@ -204,7 +203,7 @@ export default function CertificatePreviewModal({
     if (shareStatus && shareStatus !== 'error') {
       setShareStatus(null);
     }
-  }, [courseName, certificateData]);
+  }, [shareStatus, courseName, certificateData]);
 
   // Memoized certificate details for performance using utility function
   const certificateDetails = useMemo(() => {
@@ -319,7 +318,7 @@ export default function CertificatePreviewModal({
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h3 className="font-semibold text-text-dark mb-3">Certificate Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    {certificateDetails.map((detail, index) => (
+                    {certificateDetails.map((detail) => (
                       <div key={detail.label}>
                         <span className="text-text-light">{detail.label}:</span>
                         <div className={`font-medium ${detail.isMonospace ? 'font-mono text-xs' : ''}`}>

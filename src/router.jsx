@@ -14,6 +14,7 @@ import Pricing from "@/pages/public/Pricing";
 import Contact from "@/pages/public/Contact";
 import ThemeDemo from "@/pages/public/ThemeDemo";
 import PublicCertificateView from "@/pages/public/PublicCertificateView";
+import PublicCourseSharePreview from "@/pages/public/PublicCourseSharePreview";
 
 // Auth Pages
 import Login from "@/pages/auth/Login";
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
       { path: "contact", element: <Contact /> },
       { path: "theme-demo", element: <ThemeDemo /> },
       { path: "c/:shareToken", element: <PublicCertificateView /> },
+      { path: "share/course/:courseId", element: <PublicCourseSharePreview /> },
 
       // Auth Routes
       { path: "login", element: <Login /> },

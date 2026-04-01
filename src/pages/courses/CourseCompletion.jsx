@@ -62,7 +62,6 @@ export default function CourseCompletion() {
   const { success, error: showError } = useToast()
   const courses = useCourseStore(state => state.courses)
   const actions = useCourseStore(state => state.actions)
-  const certificates = useCourseStore(state => state.certificates)
   const [course, setCourse] = useState(null)
   const [completionData, setCompletionData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -298,7 +297,9 @@ export default function CourseCompletion() {
             if (sameCat.length > 0) rec = sameCat
           }
           setRecommendedCourses(rec.slice(0, 3))
-        } catch {}
+        } catch {
+          setRecommendedCourses([])
+        }
 
         // Fetch user's existing review if any
         if (user?.id) {
@@ -374,14 +375,7 @@ export default function CourseCompletion() {
         certificateInlinePreviewRef.current = null
       }
     }
-  }, [
-    loading,
-    user?.id,
-    courseId,
-    completionData?.lessonsCompleted,
-    completionData?.totalLessons,
-    actions,
-  ])
+  }, [loading, user?.id, courseId, completionData, actions])
 
   const formatTime = (minutes) => {
     const hours = Math.floor(minutes / 60)
@@ -433,12 +427,17 @@ export default function CourseCompletion() {
         showError('Could not build a valid share URL.')
         return
       }
-      const title = `I completed ${course?.title || 'a course'}!`
-      const text = `View my certificate for "${course?.title || 'a course'}" on Leadwise Academy:`
+      const title = `Certificate: ${course?.title || 'a course'}`
       if (navigator.share) {
         try {
-          await navigator.share({ title, text, url: shareUrl })
-          success('Shared successfully.')
+          const payload = { title, url: shareUrl }
+          if (!navigator.canShare || navigator.canShare(payload)) {
+            await navigator.share(payload)
+            success('Shared successfully.')
+          } else {
+            await navigator.clipboard.writeText(shareUrl)
+            success('Certificate link copied. Anyone with the link can view your certificate.')
+          }
         } catch {
           /* user cancelled */
         }

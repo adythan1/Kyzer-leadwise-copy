@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { revokeObjectURL } from '@/utils/certificateUtils';
+import { revokeObjectURL, normalizeCertificateShareToken } from '@/utils/certificateUtils';
 
 export default function PublicCertificateView() {
   const { shareToken } = useParams();
@@ -18,7 +18,8 @@ export default function PublicCertificateView() {
     let objectUrl = null;
 
     const run = async () => {
-      if (!shareToken || shareToken.trim().length < 16) {
+      const cleanToken = normalizeCertificateShareToken(shareToken);
+      if (!cleanToken || cleanToken.length < 32) {
         setError('This certificate link is invalid.');
         setLoading(false);
         return;
@@ -26,7 +27,7 @@ export default function PublicCertificateView() {
 
       try {
         const { data, error: rpcError } = await supabase.rpc('get_certificate_by_share_token', {
-          p_token: shareToken.trim(),
+          p_token: cleanToken,
         });
 
         if (rpcError) {

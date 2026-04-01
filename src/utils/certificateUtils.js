@@ -5,20 +5,51 @@ import leadwiseLogoUrl from '@/assets/images/leadwise.svg';
 import { getBaseURL } from '@/lib/supabase';
 
 /**
+ * Opaque share tokens are 32–36 hex chars (see DB `encode(gen_random_bytes(18), 'hex')`).
+ * Some share targets append title/body after the token when users paste into the address bar — strip to the real token.
+ * @param {string | null | undefined} raw
+ * @returns {string | null}
+ */
+export function normalizeCertificateShareToken(raw) {
+  if (raw == null || typeof raw !== 'string') {
+    return null;
+  }
+  let s = raw.trim();
+  if (!s) {
+    return null;
+  }
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    // keep s
+  }
+  s = s.trim();
+  const head =
+    (s.split(/\s+/)[0] || '').split('?')[0]?.split('#')[0] || '';
+  const exact = head.match(/^([a-fA-F0-9]{32,36})$/i);
+  if (exact) {
+    return exact[1].toLowerCase();
+  }
+  const bounded = s.match(/^([a-fA-F0-9]{32,36})(?![a-fA-F0-9])/i);
+  if (bounded) {
+    return bounded[1].toLowerCase();
+  }
+  const loose = s.match(/^([a-fA-F0-9]{32,36})/i);
+  return loose ? loose[1].toLowerCase() : null;
+}
+
+/**
  * Public page URL for viewing a certificate (no login). Requires {@link share_token} on the row and RPC `get_certificate_by_share_token`.
  * @param {string} shareToken
  * @returns {string | null}
  */
 export function buildCertificateShareLink(shareToken) {
-  if (!shareToken || typeof shareToken !== 'string') {
-    return null;
-  }
-  const trimmed = shareToken.trim();
-  if (!trimmed) {
+  const clean = normalizeCertificateShareToken(shareToken);
+  if (!clean) {
     return null;
   }
   const base = String(getBaseURL()).replace(/\/$/, '');
-  return `${base}/c/${encodeURIComponent(trimmed)}`;
+  return `${base}/c/${clean}`;
 }
 
 /** Leadwise wordmark (`leadwise.svg`): `.st0` navy, `.st1` orange */
