@@ -6,6 +6,219 @@ import { useCourseStore } from '@/store/courseStore';
 import { supabase } from '@/lib/supabase';
 import { SCORMPackageParser } from '@/lib/scormParser';
 
+const MAX_SCORM_FULL_EXTRACT_BYTES = 12 * 1024 * 1024;
+const MAX_SCORM_FULL_EXTRACT_FILES = 320;
+const MAX_ASSET_REGEX_ITERATIONS = 1200;
+
+function normalizeZipPath(p) {
+  return String(p || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '');
+}
+
+/** ZIP paths are case-sensitive; manifests often mismatch casing. */
+function getZipEntry(zip, path) {
+  const n = normalizeZipPath(path);
+  if (zip.files[n]) {
+    return { entry: zip.files[n], key: n };
+  }
+  const lower = n.toLowerCase();
+  const foundKey = Object.keys(zip.files).find(
+    (k) => !zip.files[k].dir && normalizeZipPath(k).toLowerCase() === lower
+  );
+  return foundKey ? { entry: zip.files[foundKey], key: foundKey } : { entry: null, key: null };
+}
+
+async function extractAllZipFilesToMap(zipContent, zipBlobSize, options) {
+  const { mountedRef, setLoadingStep } = options;
+  const allPaths = Object.keys(zipContent.files).filter((p) => !zipContent.files[p].dir);
+  const useFull =
+    zipBlobSize <= MAX_SCORM_FULL_EXTRACT_BYTES && allPaths.length <= MAX_SCORM_FULL_EXTRACT_FILES;
+
+  const fileMap = {};
+  const blobUrlsToCleanup = [];
+
+  if (!useFull) {
+    return { fileMap, blobUrlsToCleanup, mode: 'selective' };
+  }
+
+  setLoadingStep(`Unpacking package (${allPaths.length} files)…`);
+
+  const textLike = new Set(['css', 'js', 'html', 'htm', 'xhtml', 'xml', 'json', 'txt', 'svg', 'swf']);
+  let index = 0;
+  const concurrency = Math.min(10, Math.max(1, allPaths.length));
+
+  async function worker() {
+    while (index < allPaths.length) {
+      if (!mountedRef.current) return;
+      const i = index++;
+      const path = allPaths[i];
+      const zf = zipContent.files[path];
+      if (!zf || zf.dir) continue;
+      const normKey = normalizeZipPath(path);
+      try {
+        const ext = normKey.split('.').pop()?.toLowerCase() || '';
+        let blob;
+        if (textLike.has(ext)) {
+          const text = await zf.async('text');
+          const mime =
+            ext === 'css'
+              ? 'text/css'
+              : ext === 'js'
+                ? 'application/javascript'
+                : ext === 'html' || ext === 'htm' || ext === 'xhtml'
+                  ? 'text/html'
+                  : ext === 'svg'
+                    ? 'image/svg+xml'
+                    : 'application/octet-stream';
+          blob = new Blob([text], { type: mime });
+        } else {
+          blob = await zf.async('blob');
+        }
+        const u = URL.createObjectURL(blob);
+        fileMap[normKey] = u;
+        blobUrlsToCleanup.push(u);
+      } catch {
+        /* skip bad entry */
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+  return { fileMap, blobUrlsToCleanup, mode: 'full' };
+}
+
+/** Aligns with paths stored in fileMap (entry dir usually ends with /). */
+function resolveAssetPathToZipKey(entryDir, rawPath) {
+  const filePath = String(rawPath || '').trim();
+  if (
+    !filePath ||
+    /^https?:\/\//i.test(filePath) ||
+    filePath.startsWith('data:') ||
+    filePath.startsWith('blob:')
+  ) {
+    return null;
+  }
+  let decoded = filePath;
+  try {
+    decoded = decodeURIComponent(filePath);
+  } catch {
+    decoded = filePath;
+  }
+  let resolved;
+  if (decoded.startsWith('./')) {
+    resolved = entryDir + decoded.slice(2);
+  } else if (decoded.startsWith('../')) {
+    const pathParts = entryDir.split('/').filter(Boolean);
+    let rest = decoded;
+    while (rest.startsWith('../')) {
+      pathParts.pop();
+      rest = rest.slice(3);
+    }
+    resolved = (pathParts.length ? `${pathParts.join('/')}/` : '') + rest;
+  } else if (decoded.startsWith('/')) {
+    resolved = decoded.slice(1);
+  } else {
+    resolved = entryDir + decoded;
+  }
+  return normalizeZipPath(resolved);
+}
+
+function lookupBlobUrlForZipKey(fileMap, zipKey) {
+  if (!zipKey) return null;
+  if (fileMap[zipKey]) return fileMap[zipKey];
+  const lower = zipKey.toLowerCase();
+  const found = Object.keys(fileMap).find((k) => k.toLowerCase() === lower);
+  return found ? fileMap[found] : null;
+}
+
+/**
+ * Rewrite media URLs before the document is parsed so external scripts (e.g. iSpring) load
+ * from blob URLs — DOMContentLoaded handlers run too late for parser-executed scripts.
+ */
+function rewriteHtmlSrcHrefsToBlobUrls(html, entryDir, fileMap) {
+  return html.replace(/\b(src|href)\s*=\s*(["'])([^"']*)\2/gi, (full, attr, quote, url) => {
+    const zipKey = resolveAssetPathToZipKey(entryDir, url);
+    if (!zipKey) return full;
+    const blobUrl = lookupBlobUrlForZipKey(fileMap, zipKey);
+    if (!blobUrl) return full;
+    return `${attr}=${quote}${blobUrl}${quote}`;
+  });
+}
+
+function isFullHtmlScormDocument(html) {
+  const head = String(html || '').trimStart().slice(0, 800);
+  return /<!DOCTYPE\s+html/i.test(head) || /<html[\s>]/i.test(head);
+}
+
+function stripHtmlBaseTags(html) {
+  return html.replace(/<base\b[^>]*>/gi, '');
+}
+
+/** Injects SCORM bootstrap as the first element inside <head> so publisher scripts run after API + file map exist. */
+function injectScormBootstrapAfterHeadOpen(html, scriptBody) {
+  const scriptTag = `<script>\n${scriptBody}\n</script>`;
+  const headOpen = html.match(/<head([^>\/]*)>/i);
+  if (headOpen) {
+    const insertAt = headOpen.index + headOpen[0].length;
+    return html.slice(0, insertAt) + scriptTag + html.slice(insertAt);
+  }
+  const htmlOpen = html.match(/<html([^>]*)>/i);
+  if (htmlOpen) {
+    const insertAt = htmlOpen.index + htmlOpen[0].length;
+    return html.slice(0, insertAt) + `<head>${scriptTag}</head>` + html.slice(insertAt);
+  }
+  return `<!DOCTYPE html><html><head>${scriptTag}</head><body>\n${html}\n</body></html>`;
+}
+
+function buildScormBootstrapJavaScript(fileMap, entryDir, scormApiScript) {
+  const fileMapJson = JSON.stringify(fileMap);
+  const entryDirLit = JSON.stringify(entryDir);
+  return `
+    window.__scormData = {};
+    ${scormApiScript.trim()}
+    window.__scormFileMap = ${fileMapJson};
+    window.__scormBaseDir = ${entryDirLit};
+    window.__scormResolvePath = function(path) {
+      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+        return path;
+      }
+      const baseDir = window.__scormBaseDir;
+      let resolved = path.startsWith('/') ? path.substring(1) : baseDir + path;
+      resolved = resolved.replace(/\.\//g, '/').replace(/\.\.\//g, '/');
+      return window.__scormFileMap[resolved] || path;
+    };
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+      if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
+        const resolved = window.__scormResolvePath(url);
+        if (resolved !== url && typeof resolved === 'string' && resolved.startsWith('blob:')) {
+          return originalFetch(resolved, options);
+        }
+      }
+      return originalFetch(url, options);
+    };
+    document.addEventListener('DOMContentLoaded', function() {
+      const fixUrls = function() {
+        document.querySelectorAll('img[src], link[href], script[src], source[src]').forEach(el => {
+          const attr = el.hasAttribute('src') ? 'src' : 'href';
+          const url = el.getAttribute(attr);
+          if (url && !url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
+            const resolved = window.__scormResolvePath(url);
+            if (resolved !== url) {
+              el.setAttribute(attr, resolved);
+            }
+          }
+        });
+      };
+      fixUrls();
+      setTimeout(fixUrls, 100);
+      setTimeout(fixUrls, 500);
+    });
+  `;
+}
+
 /**
  * Production-Ready SCORM Player with Supabase Public Storage
  */
@@ -21,14 +234,18 @@ const ScormPlayer = ({
   autoSave = true,
   autoSaveInterval = 30000
 }) => {
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
   const { user } = useAuth();
   const { actions } = useCourseStore();
   const iframeRef = useRef(null);
   const autoSaveTimerRef = useRef(null);
   const scormApiRef = useRef(null);
+  /** Latest values for strict-mode / unmount cleanup (empty-deps effect must not read stale state). */
+  const unmountSnapshotRef = useRef({ scormContentUrl: null, scormVersion: null });
   const mountedRef = useRef(true);
   const sessionStartTimeRef = useRef(new Date());
-  const isInitializedRef = useRef(false);
   
   // State management
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +261,8 @@ const ScormPlayer = ({
   const [isSaving, setIsSaving] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  unmountSnapshotRef.current = { scormContentUrl, scormVersion };
 
   /**
    * Get properly formatted Supabase public URL
@@ -392,6 +611,10 @@ const downloadScormPackage = useCallback(async (url) => {
     return { scorm12API, scorm2004API };
   }, [scormData, user?.id, onProgress, handleCompletion, updateLessonProgress]);
 
+  useEffect(() => {
+    scormApiRef.current = createScormAPI();
+  }, [createScormAPI]);
+
   /**
    * Extract and display SCORM package
    */
@@ -580,7 +803,7 @@ const processScormPackage = useCallback(async () => {
       setError(errorMsg);
       setIsLoading(false);
       setLoadingStep('');
-      if (onError) onError(new Error('Loading timeout'));
+      onErrorRef.current?.(new Error('Loading timeout'));
     }
   }, 300000); // 5 minute timeout
   
@@ -633,40 +856,32 @@ const processScormPackage = useCallback(async () => {
 
     let fileExists = false;
     let directoryFiles = [];
+    let listingWorked = false;
     try {
       const { data: files, error: listError } = await supabase.storage
         .from('course-content')
         .list(directory, { limit: 100 });
 
-      if (!listError && files) {
-        directoryFiles = files.filter(f => !f.id || f.name).map(f => f.name);
-        fileExists = directoryFiles.some(name => name === expectedFileName);
+      if (!listError && files && files.length > 0) {
+        listingWorked = true;
+        directoryFiles = files.filter((f) => !f.id || f.name).map((f) => f.name);
+        fileExists = directoryFiles.some((name) => name === expectedFileName);
       }
-    } catch (_) {
-      // Listing failed -- proceed to download anyway and let it report its own error
+    } catch {
+      // Listing often fails under RLS or for paths the API treats as opaque — still try download.
     }
 
-    if (!fileExists && directoryFiles.length > 0) {
+    if (listingWorked && !fileExists && directoryFiles.length > 0) {
       if (!timeoutFired) clearTimeout(timeoutIdRef.id);
       throw new Error(
         `File "${expectedFileName}" was NOT found in storage directory "${directory}". ` +
-        `Files that DO exist in that directory: [${directoryFiles.join(', ')}]. ` +
-        `The stored content_url in the database does not match any file in storage. ` +
-        `Re-uploading the SCORM package from the lesson editor should fix this.`
+          `Files that DO exist in that directory: [${directoryFiles.join(', ')}]. ` +
+          `The stored content_url in the database does not match any file in storage. ` +
+          `Re-uploading the SCORM package from the lesson editor should fix this.`
       );
     }
 
-    if (!fileExists && directoryFiles.length === 0) {
-      if (!timeoutFired) clearTimeout(timeoutIdRef.id);
-      throw new Error(
-        `Directory "${directory}" is empty or does not exist in the course-content bucket. ` +
-        `Expected to find: "${expectedFileName}". ` +
-        `The SCORM package may not have been uploaded successfully, or the bucket permissions prevent listing. ` +
-        `Try re-uploading the SCORM package from the lesson editor.`
-      );
-    }
-
-    // Step 2: File verified — download it
+    // Step 2: Download (do not require list() — policies may allow read but not list)
     setLoadingStep('Downloading SCORM package...');
     currentStep = 'Downloading';
 
@@ -839,205 +1054,148 @@ const processScormPackage = useCallback(async () => {
       throw new Error(`Failed to extract ZIP: ${zipError.message || 'Unknown error'}`);
     }
     
-    const entryFile = zipContent.files[entryPoint];
-    if (!entryFile) {
+    const { entry: entryZipObj, key: entryZipKey } = getZipEntry(zipContent, entryPoint);
+    if (!entryZipObj) {
       throw new Error(`Entry file not found: ${entryPoint}`);
     }
-    
-    // Get the directory of the entry point
-    const entryDir = entryPoint.substring(0, entryPoint.lastIndexOf('/') + 1);
-    
-    // Extract entry file content first to find referenced assets
-    const entryContent = await entryFile.async('text');
-    
+
+    const entryDir = entryZipKey.includes('/')
+      ? entryZipKey.slice(0, entryZipKey.lastIndexOf('/') + 1)
+      : '';
+
+    let entryContent;
+    try {
+      entryContent = await entryZipObj.async('text');
+    } catch {
+      throw new Error(`Could not read SCORM entry file: ${entryZipKey}`);
+    }
+
     if (!mountedRef.current || timeoutFired) {
       if (!timeoutFired) clearTimeout(timeoutIdRef.id);
       return;
     }
-    
-    // Extract only necessary files (entry file and assets referenced in HTML)
-    // This is much faster than extracting all files
-    const fileMap = {};
-    const blobUrlsToCleanup = [];
-    
-    // Find referenced files in the HTML (CSS, JS, images, etc.)
-    const assetPatterns = [
-      /href=["']([^"']+\.(css|ico))["']/gi,
-      /src=["']([^"']+\.(js|jpg|jpeg|png|gif|svg|webp|mp4|mp3|wav|ogg))["']/gi,
-      /url\(["']?([^"')]+)["']?\)/gi,
-      /background=["']([^"']+)["']/gi
-    ];
-    
-    const referencedFiles = new Set();
-    assetPatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(entryContent)) !== null) {
-        const filePath = match[1] || match[0];
-        if (filePath && !filePath.startsWith('http') && !filePath.startsWith('data:')) {
-          // Resolve relative paths
-          let resolved = filePath;
-          if (filePath.startsWith('./')) {
-            resolved = entryDir + filePath.substring(2);
-          } else if (filePath.startsWith('../')) {
-            const pathParts = entryDir.split('/').filter(p => p);
-            pathParts.pop();
-            resolved = pathParts.join('/') + '/' + filePath.substring(3);
-          } else if (!filePath.startsWith('/')) {
-            resolved = entryDir + filePath;
-          } else {
-            resolved = filePath.substring(1);
-          }
-          resolved = resolved.replace(/\/+/g, '/').replace(/^\/+/, '');
-          referencedFiles.add(resolved);
-        }
-      }
+
+    const packed = await extractAllZipFilesToMap(zipContent, zipBlobSize, {
+      mountedRef,
+      setLoadingStep,
     });
-    
-    // Also include files in the same directory as entry point
-    Object.keys(zipContent.files).forEach(path => {
-      if (path.startsWith(entryDir) && !zipContent.files[path].dir) {
-        const relativePath = path.replace(entryDir, '');
-        if (relativePath && !relativePath.includes('/')) {
-          referencedFiles.add(path);
-        }
-      }
-    });
-    
-    // Extract only referenced files and common asset types
-    // Use parallel extraction for better performance
-    currentStep = `Extracting ${referencedFiles.size} files...`;
-    setLoadingStep(`Extracting ${referencedFiles.size} files...`);
-    
-    const totalFiles = referencedFiles.size;
-    const extractionPromises = [];
-    
-    for (const relativePath of referencedFiles) {
-      const file = zipContent.files[relativePath];
-      if (!file || file.dir) continue;
-      
-      const extractionPromise = (async () => {
-        try {
-          let blob;
-          const fileExtension = relativePath.split('.').pop()?.toLowerCase() || '';
-          
-          if (['css', 'js', 'html', 'htm', 'xml', 'json', 'txt'].includes(fileExtension)) {
-            const text = await file.async('text');
-            const mimeType = fileExtension === 'css' ? 'text/css' :
-                            fileExtension === 'js' ? 'application/javascript' :
-                            fileExtension === 'html' || fileExtension === 'htm' ? 'text/html' :
-                            fileExtension === 'xml' ? 'application/xml' :
-                            fileExtension === 'json' ? 'application/json' : 'text/plain';
-            blob = new Blob([text], { type: mimeType });
-          } else {
-            blob = await file.async('blob');
-          }
-          
-          const blobUrl = URL.createObjectURL(blob);
-          return { path: relativePath, url: blobUrl };
-        } catch (err) {
-          // Skip files that can't be extracted
-          return null;
-        }
-      })();
-      
-      extractionPromises.push(extractionPromise);
-    }
-    
-    // Extract files in parallel with progress updates
-    let completedCount = 0;
-    const progressInterval = setInterval(() => {
-      if (timeoutFired || !mountedRef.current) {
-        clearInterval(progressInterval);
-        return;
-      }
-      
-      if (completedCount < totalFiles) {
-        currentStep = `Extracting files... (${completedCount}/${totalFiles})`;
-        setLoadingStep(`Extracting files... (${completedCount}/${totalFiles})`);
-        
-        const elapsed = Date.now() - processStartTime;
-        if (elapsed > 300000) {
-          clearInterval(progressInterval);
-          if (!timeoutFired) {
-            timeoutFired = true;
-            clearTimeout(timeoutIdRef.id);
-            setError(`Processing timeout: Extraction is taking too long (${Math.round(elapsed / 1000)}s). The package may be too large.`);
-            setIsLoading(false);
-            setLoadingStep('');
-            if (onError) onError(new Error('Processing timeout'));
+
+    const fileMap = { ...packed.fileMap };
+    const blobUrlsToCleanup = [...packed.blobUrlsToCleanup];
+
+    if (packed.mode === 'selective') {
+      const referencedFiles = new Set();
+      const assetPatterns = [
+        /href=["']([^"']+\.(css|ico))["']/gi,
+        /src=["']([^"']+\.(js|jpg|jpeg|png|gif|svg|webp|mp4|mp3|wav|ogg))["']/gi,
+        /url\(["']?([^"')]{0,600}?)["']?\)/gi,
+        /background=["']([^"']{0,600})["']/gi,
+      ];
+
+      assetPatterns.forEach((pattern) => {
+        let iter = 0;
+        let match;
+        while ((match = pattern.exec(entryContent)) !== null && iter < MAX_ASSET_REGEX_ITERATIONS) {
+          iter += 1;
+          const filePath = match[1] || match[0];
+          if (filePath && !filePath.startsWith('http') && !filePath.startsWith('data:')) {
+            let resolved = filePath;
+            if (filePath.startsWith('./')) {
+              resolved = entryDir + filePath.slice(2);
+            } else if (filePath.startsWith('../')) {
+              const pathParts = entryDir.split('/').filter(Boolean);
+              pathParts.pop();
+              resolved = `${pathParts.join('/')}/${filePath.slice(3)}`;
+            } else if (!filePath.startsWith('/')) {
+              resolved = entryDir + filePath;
+            } else {
+              resolved = filePath.slice(1);
+            }
+            referencedFiles.add(normalizeZipPath(resolved));
           }
         }
+        pattern.lastIndex = 0;
+      });
+
+      const entryDirNorm = normalizeZipPath(entryDir);
+      Object.keys(zipContent.files).forEach((path) => {
+        const norm = normalizeZipPath(path);
+        if (!zipContent.files[path].dir && entryDirNorm && norm.startsWith(entryDirNorm)) {
+          const relativePath = norm.slice(entryDirNorm.length);
+          if (relativePath && !relativePath.includes('/')) {
+            referencedFiles.add(norm);
+          }
+        }
+      });
+
+      currentStep = `Extracting ${referencedFiles.size} files...`;
+      setLoadingStep(`Extracting ${referencedFiles.size} files...`);
+
+      const extractionPromises = [];
+      for (const rel of referencedFiles) {
+        const { entry: zf, key: canonical } = getZipEntry(zipContent, rel);
+        if (!zf || zf.dir) continue;
+        const canonicalKey = normalizeZipPath(canonical);
+        extractionPromises.push(
+          (async () => {
+            try {
+              let blob;
+              const fileExtension = canonicalKey.split('.').pop()?.toLowerCase() || '';
+              if (
+                ['css', 'js', 'html', 'htm', 'xml', 'json', 'txt', 'xhtml'].includes(fileExtension)
+              ) {
+                const text = await zf.async('text');
+                const mimeType =
+                  fileExtension === 'css'
+                    ? 'text/css'
+                    : fileExtension === 'js'
+                      ? 'application/javascript'
+                      : fileExtension === 'html' || fileExtension === 'htm' || fileExtension === 'xhtml'
+                        ? 'text/html'
+                        : fileExtension === 'xml'
+                          ? 'application/xml'
+                          : fileExtension === 'json'
+                            ? 'application/json'
+                            : 'text/plain';
+                blob = new Blob([text], { type: mimeType });
+              } else {
+                blob = await zf.async('blob');
+              }
+              const blobUrl = URL.createObjectURL(blob);
+              return { path: canonicalKey, url: blobUrl };
+            } catch {
+              return null;
+            }
+          })()
+        );
       }
-    }, 500);
-    
-    try {
+
       const results = await Promise.all(extractionPromises);
-      
       if (!mountedRef.current || timeoutFired) {
         if (!timeoutFired) clearTimeout(timeoutIdRef.id);
-        clearInterval(progressInterval);
         return;
       }
-      
-      results.forEach(result => {
+      results.forEach((result) => {
         if (result) {
           fileMap[result.path] = result.url;
           blobUrlsToCleanup.push(result.url);
         }
       });
-      
-      completedCount = totalFiles;
-    } finally {
-      clearInterval(progressInterval);
     }
-    
-    // Also extract the entry file itself
-    const entryBlob = new Blob([entryContent], { type: 'text/html' });
-    const entryBlobUrl = URL.createObjectURL(entryBlob);
-    fileMap[entryPoint] = entryBlobUrl;
-    blobUrlsToCleanup.push(entryBlobUrl);
-    
-    // Rewrite HTML content to use absolute blob URLs for assets
-    let processedContent = entryContent;
-    
-    // Simple regex-based replacement for common asset references
-    // Replace relative paths in src, href, and url() references
-    processedContent = processedContent.replace(
-      /(src|href|url\(['"]?)(\.\/|\.\.\/)?([^'")\s]+)(['"]?\)?)/gi,
-      (match, prefix, relPath, filePath, suffix) => {
-        // Skip if already absolute URL
-        if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('data:')) {
-          return match;
-        }
-        
-        // Resolve relative path
-        let resolvedPath = filePath;
-        if (relPath) {
-          const pathParts = entryDir.split('/').filter(p => p);
-          if (relPath === '../') {
-            pathParts.pop();
-          }
-          resolvedPath = pathParts.join('/') + '/' + filePath;
-        } else if (!filePath.startsWith('/')) {
-          resolvedPath = entryDir + filePath;
-        }
-        
-        // Normalize path
-        resolvedPath = resolvedPath.replace(/\/+/g, '/').replace(/^\/+/, '');
-        
-        // Replace with blob URL if available
-        if (fileMap[resolvedPath]) {
-          return prefix + fileMap[resolvedPath] + suffix;
-        }
-        
-        return match;
-      }
-    );
-    
+
+    const entryNorm = normalizeZipPath(entryZipKey);
+    if (packed.mode !== 'full' || !fileMap[entryNorm]) {
+      const entryBlob = new Blob([entryContent], { type: 'text/html' });
+      const entryBlobUrl = URL.createObjectURL(entryBlob);
+      fileMap[entryNorm] = entryBlobUrl;
+      blobUrlsToCleanup.push(entryBlobUrl);
+    }
+
+    const entryWithBlobUrls = rewriteHtmlSrcHrefsToBlobUrls(entryContent, entryDir, fileMap);
+
     // Determine SCORM version
     const scormVersionToUse = parseResult.version || '1.2';
     
-    // Create SCORM API injection script (injected directly into HTML)
     const scormApiScript = scormVersionToUse === '2004' ? `
     // SCORM 2004 API
     window.API_1484_11 = {
@@ -1151,71 +1309,31 @@ const processScormPackage = useCallback(async () => {
       }
     };
     `;
-    
-    // Create HTML with file map for dynamic loading
-    const htmlContent = `<!DOCTYPE html>
+
+    const bootstrapJs = buildScormBootstrapJavaScript(fileMap, entryDir, scormApiScript);
+
+    let htmlContent;
+    if (isFullHtmlScormDocument(entryWithBlobUrls)) {
+      htmlContent = injectScormBootstrapAfterHeadOpen(
+        stripHtmlBaseTags(entryWithBlobUrls),
+        bootstrapJs
+      );
+    } else {
+      htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${parseResult.packageData?.title || 'SCORM Content'}</title>
   <script>
-    // SCORM Data storage
-    window.__scormData = {};
-    
-    ${scormApiScript}
-    
-    // File map for accessing extracted files
-    window.__scormFileMap = ${JSON.stringify(fileMap)};
-    window.__scormBaseDir = '${entryDir}';
-    
-    // Helper to resolve file paths
-    window.__scormResolvePath = function(path) {
-      if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-        return path;
-      }
-      const baseDir = window.__scormBaseDir;
-      let resolved = path.startsWith('/') ? path.substring(1) : baseDir + path;
-      resolved = resolved.replace(/\\/\\.\\//g, '/').replace(/\\/\\.\\.\\//g, '/');
-      return window.__scormFileMap[resolved] || path;
-    };
-    
-    // Override fetch to serve from blob URLs
-    const originalFetch = window.fetch;
-    window.fetch = function(url, options) {
-      if (typeof url === 'string' && !url.startsWith('http') && !url.startsWith('data:')) {
-        const resolved = window.__scormResolvePath(url);
-        if (resolved !== url && resolved.startsWith('blob:')) {
-          return originalFetch(resolved, options);
-        }
-      }
-      return originalFetch(url, options);
-    };
-    
-    // Fix asset URLs after DOM loads
-    document.addEventListener('DOMContentLoaded', function() {
-      const fixUrls = function() {
-        document.querySelectorAll('img[src], link[href], script[src], source[src]').forEach(el => {
-          const attr = el.hasAttribute('src') ? 'src' : 'href';
-          const url = el.getAttribute(attr);
-          if (url && !url.startsWith('http') && !url.startsWith('data:') && !url.startsWith('blob:')) {
-            const resolved = window.__scormResolvePath(url);
-            if (resolved !== url) {
-              el.setAttribute(attr, resolved);
-            }
-          }
-        });
-      };
-      fixUrls();
-      setTimeout(fixUrls, 100);
-      setTimeout(fixUrls, 500);
-    });
+${bootstrapJs}
   </script>
 </head>
 <body>
-  ${processedContent}
+  ${entryWithBlobUrls}
 </body>
 </html>`;
+    }
     
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const contentUrl = URL.createObjectURL(blob);
@@ -1253,18 +1371,27 @@ const processScormPackage = useCallback(async () => {
     setError(errorMessage);
     setIsLoading(false);
     setLoadingStep('');
-    if (onError) onError(error);
+    onErrorRef.current?.(error);
   }
-}, [scormUrl, getPublicUrl, downloadScormPackage, onError]);
+}, [scormUrl, getPublicUrl, downloadScormPackage]);
+
+  const processScormPackageRef = useRef(processScormPackage);
+  processScormPackageRef.current = processScormPackage;
+
   /**
-   * Initialize
+   * Initialize — depend only on scormUrl so unstable parent callbacks (e.g. inline onError)
+   * do not restart the full download every render.
    */
   useEffect(() => {
-    if (!isInitializedRef.current && scormUrl) {
-      isInitializedRef.current = true;
-      processScormPackage();
+    mountedRef.current = true;
+    if (!scormUrl) {
+      setIsLoading(false);
+      return undefined;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    processScormPackageRef.current();
+    return () => {
+      mountedRef.current = false;
+    };
   }, [scormUrl]);
 
   /**
@@ -1343,41 +1470,66 @@ const processScormPackage = useCallback(async () => {
   }, [scormContentUrl, scormVersion, createScormAPI]);
 
   /**
-   * Cleanup
+   * Revoke prior iframe blob URLs when the active URL changes (do not toggle mountedRef here —
+   * that ran on every content swap and aborted in-flight loading).
+   */
+  const prevContentUrlRef = useRef(null);
+  useEffect(() => {
+    const prev = prevContentUrlRef.current;
+    prevContentUrlRef.current = scormContentUrl;
+    if (prev && prev.startsWith('blob:') && prev !== scormContentUrl) {
+      try {
+        URL.revokeObjectURL(prev);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [scormContentUrl]);
+
+  /**
+   * Full unmount cleanup
    */
   useEffect(() => {
     return () => {
       mountedRef.current = false;
       if (autoSaveTimerRef.current) clearInterval(autoSaveTimerRef.current);
-      
+
+      const { scormContentUrl: contentUrlForCleanup, scormVersion: versionForCleanup } =
+        unmountSnapshotRef.current;
+
       try {
         const apis = scormApiRef.current;
         if (apis) {
-          if (scormVersion === '2004') {
+          if (versionForCleanup === '2004') {
             apis.scorm2004API.Terminate('');
           } else {
             apis.scorm12API.LMSFinish('');
           }
         }
-      } catch (e) {}
-      
-      if (scormContentUrl?.startsWith('blob:')) {
-        URL.revokeObjectURL(scormContentUrl);
+      } catch {
+        /* ignore */
       }
-      
-      // Cleanup all SCORM blob URLs
+
+      if (contentUrlForCleanup?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(contentUrlForCleanup);
+        } catch {
+          /* ignore */
+        }
+      }
+
       if (window.__scormBlobUrls) {
-        window.__scormBlobUrls.forEach(url => {
+        window.__scormBlobUrls.forEach((url) => {
           try {
             URL.revokeObjectURL(url);
-          } catch (e) {
-            // Ignore errors during cleanup
+          } catch {
+            /* ignore */
           }
         });
         window.__scormBlobUrls = [];
       }
     };
-  }, [scormContentUrl, scormVersion]);
+  }, []);
 
   const handleManualSave = useCallback(async () => {
     await updateLessonProgress({ manual_save: true });
@@ -1385,9 +1537,10 @@ const processScormPackage = useCallback(async () => {
 
   const handleRetry = useCallback(() => {
     setError(null);
-    isInitializedRef.current = false;
+    setIsLoading(true);
+    setLoadingStartTime(Date.now());
     processScormPackage();
-  }, []);
+  }, [processScormPackage]);
 
   const statusDisplay = useMemo(() => {
     const map = {
@@ -1490,7 +1643,7 @@ const processScormPackage = useCallback(async () => {
                 setError('Loading cancelled by user');
                 setIsLoading(false);
                 setLoadingStep('');
-                if (onError) onError(new Error('Loading cancelled'));
+                onErrorRef.current?.(new Error('Loading cancelled'));
               }}
               className="mt-4 px-4 py-2 text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
             >

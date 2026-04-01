@@ -3319,9 +3319,15 @@ export default function LessonView() {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto">
-          <div className={`w-full ${currentLesson.content_type === 'video' ? 'bg-[#1c1d1f]' : 'bg-background-light'}`}>
+          <div
+            className={`w-full ${
+              String(currentLesson.content_type || '').toLowerCase() === 'video'
+                ? 'bg-[#1c1d1f]'
+                : 'bg-background-light'
+            }`}
+          >
             <div className="max-w-5xl mx-auto">
-              {currentLesson.content_type === 'scorm' ? (
+              {String(currentLesson.content_type || '').toLowerCase() === 'scorm' ? (
                 <div className="w-full min-h-[400px]">
                   <ScormPlayer
                     scormUrl={currentLesson.content_url}
