@@ -1,5 +1,6 @@
 // src/components/auth/SignupForm.jsx - ENHANCED WITH EMAIL VALIDATION
 import { useState } from "react";
+import { clsx } from "clsx";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -232,140 +233,136 @@ export default function SignupForm({ accountType, onSuccess }) {
 
   const passwordStrength = getPasswordStrength(password);
 
+  const fieldInputClass = "py-1.5 text-sm";
+
   return (
-    <div className="space-y-6">
-      {/* Rate Limit Warning */}
+    <div className="space-y-3">
       {rateLimited && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <Clock className="w-5 h-5 text-yellow-600 mr-3" />
-            <div>
-              <h4 className="text-sm font-medium text-yellow-800">Email Rate Limit Hit</h4>
-              <p className="text-sm text-yellow-700 mt-1">
-                Supabase's free email service has limits. 
-                <br />
-                <strong>Quick fixes:</strong>
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-2.5 sm:p-3">
+          <div className="flex gap-2">
+            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-yellow-600" />
+            <div className="min-w-0 text-xs text-yellow-800">
+              <p className="font-medium">Email rate limit</p>
+              <p className="mt-0.5 text-yellow-700">
+                Wait and retry, configure SMTP, or adjust email confirmation in Supabase.
               </p>
-              <ul className="text-xs text-yellow-700 mt-2 space-y-1">
-                <li>• Wait 1 hour and try again</li>
-                <li>• Set up SMTP (recommended)</li>
-                <li>• Temporarily disable email confirmation in Supabase settings</li>
-              </ul>
             </div>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Name Fields */}
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
           <div>
-            <label className="block text-sm font-medium text-text-dark mb-2">
-              First Name
+            <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+              First name
             </label>
             <Input
               {...register("firstName")}
               placeholder="John"
               error={errors.firstName?.message}
               disabled={isLoading}
+              className={fieldInputClass}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-dark mb-2">
-              Last Name
+            <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+              Last name
             </label>
             <Input
               {...register("lastName")}
               placeholder="Doe"
               error={errors.lastName?.message}
               disabled={isLoading}
+              className={fieldInputClass}
             />
           </div>
         </div>
 
-        {/* ✅ ENHANCED: Email with availability checking */}
         <div>
-          <label className="block text-sm font-medium text-text-dark mb-2">
-            Email Address
+          <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+            Email
           </label>
           <div className="relative">
             <Input
               type="email"
               {...register("email", {
-                onChange: handleEmailChange
+                onChange: handleEmailChange,
               })}
-              placeholder="john@example.com"
+              placeholder="you@company.com"
               error={errors.email?.message}
               disabled={isLoading}
-              className={`${
-                emailCheckStatus === 'available' ? 'border-green-500 focus:ring-green-500' :
-                emailCheckStatus === 'taken' ? 'border-red-500 focus:ring-red-500' : ''
-              }`}
+              className={clsx(
+                fieldInputClass,
+                emailCheckStatus === "available" && "border-green-500 focus:ring-green-500",
+                emailCheckStatus === "taken" && "border-red-500 focus:ring-red-500",
+              )}
             />
-            
-            {/* Email status indicator */}
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {emailCheckStatus === 'checking' && (
                 <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               )}
               {emailCheckStatus === 'available' && (
-                <CheckCircle className="w-5 h-5 text-green-500" />
+                <CheckCircle className="h-4 w-4 text-green-500" />
               )}
               {emailCheckStatus === 'taken' && (
-                <X className="w-5 h-5 text-red-500" />
+                <X className="h-4 w-4 text-red-500" />
               )}
             </div>
           </div>
           
-          {/* Email status message */}
-          {emailCheckStatus === 'available' && !errors.email && (
-            <p className="mt-1 text-sm text-green-600 flex items-center">
-              <CheckCircle className="w-4 h-4 mr-1" />
-              Email is available
+          {emailCheckStatus === "available" && !errors.email && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+              Available
             </p>
           )}
-          {emailCheckStatus === 'taken' && (
-            <p className="mt-1 text-sm text-red-600 flex items-center">
-                <AlertCircle className="w-7 h-5 text-red-500" />
-              Email is taken, please use a different one!
+          {emailCheckStatus === "taken" && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-red-600">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              Already registered—sign in or use another email.
             </p>
           )}
         </div>
 
-        {/* Corporate Fields */}
-        {accountType === 'corporate' && (
+        {accountType === "corporate" && (
           <>
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-2">
-                Job Title
-              </label>
-              <Input
-                {...register("jobTitle")}
-                placeholder="CEO, Manager, Developer, etc."
-                error={errors.jobTitle?.message}
-                disabled={isLoading}
-              />
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+                  Job title
+                </label>
+                <Input
+                  {...register("jobTitle")}
+                  placeholder="Your role"
+                  error={errors.jobTitle?.message}
+                  disabled={isLoading}
+                  className={fieldInputClass}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+                  Company
+                </label>
+                <Input
+                  {...register("companyName")}
+                  placeholder="Company name"
+                  error={errors.companyName?.message}
+                  disabled={isLoading}
+                  className={fieldInputClass}
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-text-dark mb-2">
-                Company Name
-              </label>
-              <Input
-                {...register("companyName")}
-                placeholder="Acme Corporation"
-                error={errors.companyName?.message}
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-dark mb-2">
-                Company Size
+              <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+                Company size
               </label>
               <select
                 {...register("employeeCount")}
-                className="w-full px-3 py-2 border border-background-dark rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full rounded-md border border-background-dark px-3 py-1.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={isLoading}
               >
                 <option value="">Select company size</option>
@@ -374,8 +371,8 @@ export default function SignupForm({ accountType, onSuccess }) {
                 <option value="51-200">51-200 employees</option>
               </select>
               {errors.employeeCount && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-1" />
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-red-600">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                   {errors.employeeCount.message}
                 </p>
               )}
@@ -383,100 +380,108 @@ export default function SignupForm({ accountType, onSuccess }) {
           </>
         )}
 
-        {/* Password */}
-        <div>
-          <label className="block text-sm font-medium text-text-dark mb-2">
-            Password
-          </label>
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              {...register("password")}
-              placeholder="Create a strong password"
-              error={errors.password?.message}
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-light hover:text-text-dark"
-              disabled={isLoading}
-            >
-              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
-          </div>
-
-          {/* Password Strength Indicator */}
-          {password && (
-            <div className="mt-2">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 h-2 bg-background-medium rounded-full overflow-hidden">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+              Password
+            </label>
+            <div className="relative">
+              <Input
+                type={showPassword ? "text" : "password"}
+                {...register("password")}
+                placeholder="8+ chars, upper, lower, number"
+                error={errors.password?.message}
+                disabled={isLoading}
+                className={fieldInputClass}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-light hover:text-text-dark"
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+            {password ? (
+              <div className="mt-1 flex items-center gap-2">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-background-medium">
                   <div
-                    className={`h-full transition-all duration-300 ${passwordStrength.color}`}
-                    style={{ width: `${(passwordStrength.strength / 4) * 100}%` }}
+                    className={clsx(
+                      "h-full max-w-full transition-all duration-300",
+                      passwordStrength.color,
+                    )}
+                    style={{
+                      width: `${(Math.min(passwordStrength.strength, 4) / 4) * 100}%`,
+                    }}
                   />
                 </div>
-                <span className="text-xs text-text-light font-medium">
+                <span className="text-[10px] font-medium text-text-muted sm:text-xs">
                   {passwordStrength.label}
                 </span>
               </div>
-            </div>
-          )}
-        </div>
+            ) : null}
+          </div>
 
-        {/* Confirm Password */}
-        <div>
-          <label className="block text-sm font-medium text-text-dark mb-2">
-            Confirm Password
-          </label>
-          <div className="relative">
-            <Input
-              type={showConfirmPassword ? "text" : "password"}
-              {...register("confirmPassword")}
-              placeholder="Confirm your password"
-              error={errors.confirmPassword?.message}
-              disabled={isLoading}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-text-light hover:text-text-dark"
-              disabled={isLoading}
-            >
-              {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-            </button>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-text-dark sm:text-sm">
+              Confirm password
+            </label>
+            <div className="relative">
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                {...register("confirmPassword")}
+                placeholder="Repeat password"
+                error={errors.confirmPassword?.message}
+                disabled={isLoading}
+                className={fieldInputClass}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-light hover:text-text-dark"
+                disabled={isLoading}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Submit Button */}
         <Button
           type="submit"
           className="w-full"
           loading={isLoading}
-          disabled={isLoading || emailCheckStatus === 'taken'}
+          disabled={isLoading || emailCheckStatus === "taken"}
         >
-          {isLoading ? 'Creating Account...' : 'Create Account'}
+          {isLoading ? "Creating account…" : "Create account"}
         </Button>
 
-        {/* Development Notice */}
-        {import.meta.env.DEV && import.meta.env.VITE_SKIP_EMAIL_CONFIRMATION === 'true' && (
-          <div className="text-xs text-blue-600 bg-blue-50 rounded-lg p-3 text-center">
-            🚀 Development Mode: Email confirmation disabled
-          </div>
-        )}
+        {import.meta.env.DEV &&
+          import.meta.env.VITE_SKIP_EMAIL_CONFIRMATION === "true" && (
+            <div className="rounded-md bg-blue-50 px-2 py-1.5 text-center text-[11px] text-blue-600 sm:px-3">
+              Dev mode: email confirmation off
+            </div>
+          )}
 
-        {/* Corporate info */}
-        {accountType === 'corporate' && (
-          <div className="text-xs text-text-light bg-background-medium rounded-lg p-3">
-            <p className="font-medium mb-1">Corporate Account Benefits:</p>
-            <ul className="space-y-1">
-              <li>• Manage up to 200 employees</li>
-              <li>• Advanced reporting and analytics</li>
-              <li>• Bulk course assignments</li>
-              <li>• Priority support</li>
+        {accountType === "corporate" ? (
+          <details className="rounded-md border border-background-dark bg-background-light text-[11px] text-text-light">
+            <summary className="cursor-pointer list-none px-2.5 py-1.5 font-medium text-text-dark marker:content-none [&::-webkit-details-marker]:hidden">
+              What&apos;s included with corporate
+            </summary>
+            <ul className="space-y-0.5 border-t border-background-dark px-2.5 py-1.5">
+              <li>Up to 200 employees, reporting, bulk assigns</li>
             </ul>
-          </div>
-        )}
+          </details>
+        ) : null}
       </form>
     </div>
   );

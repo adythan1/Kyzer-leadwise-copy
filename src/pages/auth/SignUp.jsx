@@ -1,10 +1,10 @@
-// src/pages/auth/Signup.jsx - ENSURE STATE IS WORKING
+// src/pages/auth/SignUp.jsx
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react"; // Add useEffect
+import { useState } from "react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import SignupForm from "@/components/auth/SignupForm";
-import { Users, User, Building, Check } from "lucide-react";
-import leadwiseLogo from "../../assets/images/leadwise.svg";
+import { User, Building, Check } from "lucide-react";
+import AuthSplitLayout from "@/components/auth/AuthSplitLayout";
 import PageTitle from "@/components/layout/PageTitle";
 
 export default function Signup() {
@@ -12,20 +12,11 @@ export default function Signup() {
   const [accountType, setAccountType] = useState("individual");
   const { isAuthenticated } = useAuth();
 
-  // 🔍 DEBUG: Track account type changes
-  useEffect(() => {
-  }, [accountType]);
-
   const handleSignupSuccess = (data) => {
-    navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, { 
+    navigate(`/verify-email?email=${encodeURIComponent(data.email)}`, {
       replace: true,
-      state: { email: data.email, accountType }
+      state: { email: data.email, accountType },
     });
-  };
-
-  // 🔍 DEBUG: Log accountType when buttons are clicked
-  const handleAccountTypeChange = (type) => {
-    setAccountType(type);
   };
 
   if (isAuthenticated) {
@@ -33,176 +24,98 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light flex">
-      <div className="flex-1 flex items-center justify-center">
-        <div className="max-w-md w-full space-y-8">
-          {/* Header */}
-          <div className="text-center">
-            <div className="flex justify-center">
-              <img src={leadwiseLogo} alt="Leadwise Logo" className="h-20" />
-            </div>
-            <PageTitle
-              as="h2"
-              align="center"
-              title="Create your account"
-              subtitle="Start your learning journey today"
-              subtitleWrapperClassName="mt-2 text-sm text-text-light"
-            />
-          </div>
+    <AuthSplitLayout>
+      <PageTitle
+        as="h2"
+        align="left"
+        size="compact"
+        title="Create your account"
+        subtitleWrapperClassName="mt-0.5 text-xs text-text-light sm:text-sm"
+        className="mb-0"
+      />
 
-          {/* Account Type Selection */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-text-dark">
-              Choose account type
-            </h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => handleAccountTypeChange("individual")} // ✅ Use handler
-                className={`relative p-4 border rounded-lg text-left transition-all ${
-                  accountType === "individual"
-                    ? "border-primary bg-primary-light ring-2 ring-primary/20"
-                    : "border-background-dark hover:border-primary-light"
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <User className="w-5 h-5 text-primary mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-dark">
-                      Individual
-                    </p>
-                    <p className="text-xs text-text-light mt-1">
-                      Personal learning account
-                    </p>
-                  </div>
-                  {accountType === "individual" && (
-                    <Check className="w-4 h-4 text-primary" />
-                  )}
-                </div>
-              </button>
+      <div className="space-y-2">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted sm:text-sm sm:normal-case sm:tracking-normal sm:text-text-dark">
+          Account type
+        </h3>
 
-              <button
-                type="button"
-                onClick={() => handleAccountTypeChange("corporate")} // ✅ Use handler
-                className={`relative p-4 border rounded-lg text-left transition-all ${
-                  accountType === "corporate"
-                    ? "border-primary bg-primary-light ring-2 ring-primary/20"
-                    : "border-background-dark hover:border-primary-light"
-                }`}
-              >
-                <div className="flex items-start space-x-3">
-                  <Building className="w-5 h-5 text-primary mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text-dark">
-                      Corporate
-                    </p>
-                    <p className="text-xs text-text-light mt-1">
-                      Up to 200 employees
-                    </p>
-                  </div>
-                  {accountType === "corporate" && (
-                    <Check className="w-4 h-4 text-primary" />
-                  )}
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Signup Form */}
-          <SignupForm
-            accountType={accountType}
-            onSuccess={handleSignupSuccess}
-          />
-
-          {/* Footer Links */}
-          <div className="text-center space-y-4">
-            <div className="text-sm">
-              <span className="text-text-light">Already have an account? </span>
-              <Link
-                to="/login"
-                className="font-medium text-primary hover:text-primary-dark transition-colors"
-              >
-                Sign in here
-              </Link>
-            </div>
-
-            <div className="text-xs text-text-light text-center">
-              By creating an account, you agree to our{" "}
-              <Link to="/terms" className="text-primary hover:underline">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link to="/privacy" className="text-primary hover:underline">
-                Privacy Policy
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side - Marketing/Branding */}
-      <div className="hidden lg:flex lg:flex-1 bg-primary relative overflow-hidden">
-        <div className="flex items-center justify-center w-full p-12">
-          <div className="text-center text-white max-w-lg">
-            <PageTitle
-              size="large"
-              align="center"
-              title="Start Learning Today"
-              titleClassName="!text-white"
-              subtitle="Join thousands of learners advancing their careers with our comprehensive courses and professional certificates."
-              subtitleWrapperClassName="text-lg text-gray-200 mb-8"
-            />
-
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
-              <h3 className="text-xl font-semibold mb-4">What's included</h3>
-              <div className="space-y-3 text-left">
-                <div className="flex items-center space-x-3">
-                  <Check className="w-5 h-5 text-green-300" />
-                  <span className="text-gray-200">
-                    Access to all course materials
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Check className="w-5 h-5 text-green-300" />
-                  <span className="text-gray-200">
-                    Progress tracking & analytics
-                  </span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Check className="w-5 h-5 text-green-300" />
-                  <span className="text-gray-200">
-                    Professional certificates
-                  </span>
-                </div>
-                {accountType === "corporate" && (
-                  <>
-                    <div className="flex items-center space-x-3">
-                      <Check className="w-5 h-5 text-green-300" />
-                      <span className="text-gray-200">
-                        Team management tools
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Check className="w-5 h-5 text-green-300" />
-                      <span className="text-gray-200">Advanced reporting</span>
-                    </div>
-                  </>
-                )}
+        <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+          <button
+            type="button"
+            onClick={() => setAccountType("individual")}
+            className={`relative rounded-lg border px-2.5 py-2.5 text-left transition-all sm:px-3 sm:py-3 ${
+              accountType === "individual"
+                ? "border-primary bg-primary-light ring-2 ring-primary/20"
+                : "border-background-dark hover:border-primary-light"
+            }`}
+          >
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <User className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-text-dark sm:text-sm">
+                  Individual
+                </p>
+                <p className="hidden text-[11px] text-text-light sm:block">
+                  Personal use
+                </p>
               </div>
+              {accountType === "individual" && (
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
+              )}
             </div>
+          </button>
 
-            <div className="text-sm text-gray-300">
-              {accountType === "individual"
-                ? "Start free, upgrade anytime"
-                : "Annual subscription • Up to 200 employees"}
+          <button
+            type="button"
+            onClick={() => setAccountType("corporate")}
+            className={`relative rounded-lg border px-2.5 py-2.5 text-left transition-all sm:px-3 sm:py-3 ${
+              accountType === "corporate"
+                ? "border-primary bg-primary-light ring-2 ring-primary/20"
+                : "border-background-dark hover:border-primary-light"
+            }`}
+          >
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <Building className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-text-dark sm:text-sm">
+                  Corporate
+                </p>
+                <p className="hidden text-[11px] text-text-light sm:block">
+                  Up to 200 seats
+                </p>
+              </div>
+              {accountType === "corporate" && (
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary sm:h-4 sm:w-4" />
+              )}
             </div>
-          </div>
+          </button>
         </div>
-
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
       </div>
-    </div>
+
+      <SignupForm accountType={accountType} onSuccess={handleSignupSuccess} />
+
+      <div className="space-y-2 text-center">
+        <p className="text-xs sm:text-sm">
+          <span className="text-text-light">Already have an account? </span>
+          <Link
+            to="/login"
+            className="font-medium text-primary hover:text-primary-dark transition-colors"
+          >
+            Sign in
+          </Link>
+        </p>
+        <p className="text-[11px] leading-snug text-text-light sm:text-xs">
+          By signing up you agree to our{" "}
+          <Link to="/terms" className="text-primary hover:underline">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="text-primary hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      </div>
+    </AuthSplitLayout>
   );
 }
