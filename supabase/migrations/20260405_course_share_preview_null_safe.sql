@@ -1,4 +1,4 @@
--- Public course preview for share links (anon-safe). Returns metadata + module titles only — no lesson content URLs.
+-- Harden get_course_share_preview: treat NULL is_published as unpublished; stable module ordering fallback.
 
 CREATE OR REPLACE FUNCTION public.get_course_share_preview(p_course_id uuid)
 RETURNS jsonb
@@ -20,7 +20,6 @@ BEGIN
     co.thumbnail_url,
     co.is_free_trial,
     co.is_published,
-    co.catalog_visible,
     co.restricted_organization_id,
     co.difficulty_level,
     co.duration_minutes,
@@ -35,10 +34,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF NOT c.is_published
-     OR NOT c.catalog_visible
-     OR c.restricted_organization_id IS NOT NULL
-  THEN
+  IF NOT COALESCE(c.is_published, false) OR c.restricted_organization_id IS NOT NULL THEN
     RETURN NULL;
   END IF;
 
@@ -48,7 +44,7 @@ BEGIN
         'title', m.title,
         'lesson_count', lesson_counts.cnt
       )
-      ORDER BY m.order_index NULLS LAST
+      ORDER BY m.order_index NULLS LAST, m.id
     ),
     '[]'::jsonb
   )
@@ -97,4 +93,4 @@ REVOKE ALL ON FUNCTION public.get_course_share_preview(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.get_course_share_preview(uuid) TO anon, authenticated;
 
 COMMENT ON FUNCTION public.get_course_share_preview(uuid) IS
-  'Marketing/share preview: safe course snapshot for anon users. Only published, catalog-visible, non-org-restricted courses.';
+  'Public share preview: anon-safe course snapshot. Published (non-null true), not org-restricted. Direct share links ignore catalog_visible.';

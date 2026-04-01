@@ -1,4 +1,5 @@
--- Public course preview for share links (anon-safe). Returns metadata + module titles only — no lesson content URLs.
+-- Share preview: allow direct links for any published, non–org-restricted course.
+-- catalog_visible only controls catalog listing; hiding from catalog should not break shared URLs.
 
 CREATE OR REPLACE FUNCTION public.get_course_share_preview(p_course_id uuid)
 RETURNS jsonb
@@ -20,7 +21,6 @@ BEGIN
     co.thumbnail_url,
     co.is_free_trial,
     co.is_published,
-    co.catalog_visible,
     co.restricted_organization_id,
     co.difficulty_level,
     co.duration_minutes,
@@ -35,10 +35,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF NOT c.is_published
-     OR NOT c.catalog_visible
-     OR c.restricted_organization_id IS NOT NULL
-  THEN
+  IF NOT c.is_published OR c.restricted_organization_id IS NOT NULL THEN
     RETURN NULL;
   END IF;
 
@@ -97,4 +94,4 @@ REVOKE ALL ON FUNCTION public.get_course_share_preview(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.get_course_share_preview(uuid) TO anon, authenticated;
 
 COMMENT ON FUNCTION public.get_course_share_preview(uuid) IS
-  'Marketing/share preview: safe course snapshot for anon users. Only published, catalog-visible, non-org-restricted courses.';
+  'Public share preview: safe course snapshot for anon. Published + not restricted to a single org (catalog_visible ignored for direct links).';

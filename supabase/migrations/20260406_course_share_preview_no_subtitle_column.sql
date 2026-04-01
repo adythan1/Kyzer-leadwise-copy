@@ -1,4 +1,12 @@
--- Public course preview for share links (anon-safe). Returns metadata + module titles only — no lesson content URLs.
+-- courses.subtitle may not exist in all environments; preview RPC must not reference it.
+-- is_free_trial is required by the app; ensure column exists if 20260315 was never applied.
+
+ALTER TABLE public.courses
+  ADD COLUMN IF NOT EXISTS is_free_trial boolean NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_courses_is_free_trial
+  ON public.courses (is_free_trial)
+  WHERE is_free_trial = true;
 
 CREATE OR REPLACE FUNCTION public.get_course_share_preview(p_course_id uuid)
 RETURNS jsonb
@@ -20,7 +28,6 @@ BEGIN
     co.thumbnail_url,
     co.is_free_trial,
     co.is_published,
-    co.catalog_visible,
     co.restricted_organization_id,
     co.difficulty_level,
     co.duration_minutes,
@@ -35,10 +42,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  IF NOT c.is_published
-     OR NOT c.catalog_visible
-     OR c.restricted_organization_id IS NOT NULL
-  THEN
+  IF NOT COALESCE(c.is_published, false) OR c.restricted_organization_id IS NOT NULL THEN
     RETURN NULL;
   END IF;
 
@@ -48,7 +52,7 @@ BEGIN
         'title', m.title,
         'lesson_count', lesson_counts.cnt
       )
-      ORDER BY m.order_index NULLS LAST
+      ORDER BY m.order_index NULLS LAST, m.id
     ),
     '[]'::jsonb
   )
@@ -97,4 +101,4 @@ REVOKE ALL ON FUNCTION public.get_course_share_preview(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.get_course_share_preview(uuid) TO anon, authenticated;
 
 COMMENT ON FUNCTION public.get_course_share_preview(uuid) IS
-  'Marketing/share preview: safe course snapshot for anon users. Only published, catalog-visible, non-org-restricted courses.';
+  'Public share preview: anon-safe course snapshot. No courses.subtitle column; is_free_trial ensured.';

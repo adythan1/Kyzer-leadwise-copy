@@ -19,8 +19,9 @@ import Card from '@/components/ui/Card';
 import PageTitle from '@/components/layout/PageTitle';
 import { FreeTrialBadge, UpgradeBanner } from '@/components/course/UpgradePrompt';
 
+/** Accept any canonical UUID string from the URL (avoids false “unavailable” for valid ids). */
 const COURSE_ID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function formatDurationMinutes(totalMinutes) {
   const n = Number(totalMinutes) || 0;
@@ -40,6 +41,7 @@ export default function PublicCourseSharePreview() {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
   const [enrollment, setEnrollment] = useState(null);
 
   const courseIdValid = useMemo(() => courseId && COURSE_ID_RE.test(courseId), [courseId]);
@@ -65,6 +67,7 @@ export default function PublicCourseSharePreview() {
 
       setLoading(true);
       setNotFound(false);
+      setFetchError(null);
 
       try {
         const { data, error } = await supabase.rpc('get_course_share_preview', {
@@ -74,18 +77,21 @@ export default function PublicCourseSharePreview() {
         if (cancelled) return;
 
         if (error) {
-          setNotFound(true);
+          setFetchError(error.message || 'Could not load course preview.');
+          setNotFound(false);
           setPreview(null);
           return;
         }
 
         if (data == null || (typeof data === 'object' && Object.keys(data).length === 0)) {
           setNotFound(true);
+          setFetchError(null);
           setPreview(null);
           return;
         }
 
         const row = typeof data === 'string' ? JSON.parse(data) : data;
+        setFetchError(null);
         setPreview(row);
       } finally {
         if (!cancelled) setLoading(false);
@@ -148,13 +154,41 @@ export default function PublicCourseSharePreview() {
     );
   }
 
+  if (fetchError) {
+    return (
+      <div className="max-w-lg mx-auto py-16 px-4 text-center">
+        <PageTitle title="Preview could not be loaded" />
+        <p className="text-text-light mt-2 mb-4">
+          The server could not run the{' '}
+          <code className="text-xs bg-background-light px-1 rounded mx-0.5">get_course_share_preview</code> function.
+          Run the latest share-preview migrations on Supabase (
+          <code className="text-xs bg-background-light px-1 rounded">supabase db push</code> or SQL editor): they align the
+          RPC with your schema (e.g. no <code className="text-xs bg-background-light px-1 rounded">courses.subtitle</code>
+          , and{' '}
+          <code className="text-xs bg-background-light px-1 rounded">20260407_course_share_preview_is_free_trial_column.sql</code>{' '}
+          adds <code className="text-xs bg-background-light px-1 rounded">is_free_trial</code> if it is missing). Then
+          reload this page.
+        </p>
+        {import.meta.env.DEV ? (
+          <pre className="text-left text-xs text-text-muted bg-background-light rounded-lg p-3 mb-6 overflow-x-auto whitespace-pre-wrap break-words">
+            {fetchError}
+          </pre>
+        ) : null}
+        <Button variant="secondary" onClick={() => navigate('/')}>
+          Back to home
+        </Button>
+      </div>
+    );
+  }
+
   if (notFound || !preview) {
     return (
       <div className="max-w-lg mx-auto py-16 px-4 text-center">
         <PageTitle title="Course unavailable" />
         <p className="text-text-light mt-2 mb-6">
-          This course is not available to preview. It may be unpublished, limited to a specific
-          organization, or the link may be incorrect.
+          This course is not available for a public preview. It may be unpublished (still in draft),
+          limited to a specific organization, or the link may be incorrect. Published catalog courses
+          shared from the app use the same rules: they must be published and not organization-restricted.
         </p>
         <Button variant="secondary" onClick={() => navigate('/')}>
           Back to home
