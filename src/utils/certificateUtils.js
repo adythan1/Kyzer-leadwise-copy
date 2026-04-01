@@ -2,6 +2,24 @@
 // Certificate utility functions for better code organization
 
 import leadwiseLogoUrl from '@/assets/images/leadwise.svg';
+import { getBaseURL } from '@/lib/supabase';
+
+/**
+ * Public page URL for viewing a certificate (no login). Requires {@link share_token} on the row and RPC `get_certificate_by_share_token`.
+ * @param {string} shareToken
+ * @returns {string | null}
+ */
+export function buildCertificateShareLink(shareToken) {
+  if (!shareToken || typeof shareToken !== 'string') {
+    return null;
+  }
+  const trimmed = shareToken.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const base = String(getBaseURL()).replace(/\/$/, '');
+  return `${base}/c/${encodeURIComponent(trimmed)}`;
+}
 
 /** Leadwise wordmark (`leadwise.svg`): `.st0` navy, `.st1` orange */
 export const LEADWISE_BRAND_NAVY = '#002654';

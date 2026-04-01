@@ -7,7 +7,8 @@ import {
   formatCertificateData,
   downloadBlob,
   revokeObjectURL,
-  handleCertificateError
+  handleCertificateError,
+  buildCertificateShareLink,
 } from '@/utils/certificateUtils';
 
 export default function CertificatePreviewModal({
@@ -121,44 +122,83 @@ export default function CertificatePreviewModal({
     }
   }, [certificateData, actions]);
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
+    if (!certificateData || !userId) {
+      setShareStatus('error');
+      return;
+    }
+
+    setCopyingLink(true);
+    try {
+      let token = certificateData.share_token;
+      if (!token) {
+        const { data: minted, error: mintError } = await actions.mintCertificateShareToken(
+          certificateData.id
+        );
+        if (mintError || !minted) {
+          setShareStatus('error');
+          return;
+        }
+        token = minted;
+        setCertificateData((prev) => (prev ? { ...prev, share_token: token } : prev));
+      }
+
+      const shareUrl =
+        buildCertificateShareLink(token) ||
+        certificateData.share_url ||
+        certificateData.public_url ||
+        window.location.href;
+
+      const sharePayload = {
+        title: `${courseName} Certificate`,
+        text: `I completed ${courseName} and earned my certificate!`,
+        url: shareUrl,
+      };
+
+      if (navigator.share && (!navigator.canShare || navigator.canShare(sharePayload))) {
+        await navigator.share(sharePayload);
+        setShareStatus('shared');
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareStatus('copied');
+      } else {
+        window.open(shareUrl, '_blank', 'noopener');
+        setShareStatus('opened');
+      }
+    } catch {
+      setShareStatus('error');
+    } finally {
+      setCopyingLink(false);
+    }
+  }, [courseName, certificateData, userId, actions]);
+
+  const handleViewInNewTab = useCallback(async () => {
     if (!certificateData) return;
 
-    const shareUrl = certificateData.share_url || certificateData.public_url || window.location.href;
-    const sharePayload = {
-      title: `${courseName} Certificate`,
-      text: `I completed ${courseName} and earned my certificate!`,
-      url: shareUrl
-    };
+    let shareUrl =
+      buildCertificateShareLink(certificateData.share_token) ||
+      certificateData.share_url ||
+      certificateData.public_url;
 
-    if (navigator.share && navigator.canShare?.(sharePayload)) {
-      navigator.share(sharePayload).then(() => {
-        setShareStatus('shared');
-      }).catch(() => {});
-    } else if (navigator.clipboard) {
-      setCopyingLink(true);
-      navigator.clipboard
-        .writeText(shareUrl)
-        .then(() => {
-          setShareStatus('copied');
-        })
-        .catch(() => {
-          setShareStatus('error');
-        })
-        .finally(() => setCopyingLink(false));
-    } else {
-      // Fallback: open in new tab
+    if (!shareUrl && userId) {
+      const { data: minted } = await actions.mintCertificateShareToken(certificateData.id);
+      if (minted) {
+        setCertificateData((prev) => (prev ? { ...prev, share_token: minted } : prev));
+        shareUrl = buildCertificateShareLink(minted);
+      }
+    }
+
+    if (shareUrl) {
       window.open(shareUrl, '_blank', 'noopener');
       setShareStatus('opened');
+      return;
     }
-  }, [courseName, certificateData]);
 
-  const handleViewInNewTab = useCallback(() => {
-    if (!previewUrl && !certificateData) return;
-    const targetUrl = certificateData?.share_url || certificateData?.public_url || previewUrl;
-    window.open(targetUrl, '_blank', 'noopener');
-    setShareStatus('opened');
-  }, [previewUrl, certificateData]);
+    if (previewUrl) {
+      window.open(previewUrl, '_blank', 'noopener');
+      setShareStatus('opened');
+    }
+  }, [previewUrl, certificateData, userId, actions]);
 
   const resetShareStatus = useCallback(() => {
     if (shareStatus && shareStatus !== 'error') {
@@ -305,7 +345,7 @@ export default function CertificatePreviewModal({
             </div>
             <div className="flex flex-wrap gap-2 justify-end">
               {previewUrl && (
-                <Button variant="ghost" size="sm" onClick={handleViewInNewTab}>
+                <Button variant="ghost" size="sm" onClick={() => void handleViewInNewTab()}>
                   <Eye className="w-4 h-4 mr-2" />
                   Open Preview
                 </Button>
@@ -315,7 +355,7 @@ export default function CertificatePreviewModal({
                 size="sm"
                 onClick={() => {
                   resetShareStatus();
-                  handleShare();
+                  void handleShare();
                 }}
                 disabled={copyingLink}
               >

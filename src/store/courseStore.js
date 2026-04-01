@@ -1156,6 +1156,26 @@ const useCourseStore = create((set, get) => ({
       }
     },
 
+    /**
+     * Ensures a public share token exists for the certificate (owner only). Uses RPC `mint_certificate_share_token`.
+     * @param {string} certificateId
+     * @returns {Promise<{ data: string | null, error: Error | null }>}
+     */
+    mintCertificateShareToken: async (certificateId) => {
+      try {
+        const { data, error } = await supabase.rpc('mint_certificate_share_token', {
+          p_certificate_id: certificateId,
+        });
+        if (error) {
+          throw error;
+        }
+        const token = typeof data === 'string' ? data : data != null ? String(data) : null;
+        return { data: token && token.length > 0 ? token : null, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+
     // Create a certificate record upon completion
     createCertificate: async (userId, courseId) => {
       try {

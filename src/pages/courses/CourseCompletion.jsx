@@ -2,7 +2,7 @@
 
 
 // src/pages/courses/CourseCompletion.jsx
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { 
   Award, 
@@ -26,6 +26,12 @@ import { useToast } from '@/components/ui'
 import { useCourseStore } from '@/store/courseStore'
 import { useAuth } from '@/hooks/auth/useAuth'
 import CertificatePreviewModal from '@/components/course/CertificatePreviewModal'
+import {
+  revokeObjectURL,
+  handleCertificateError,
+  downloadBlob,
+  buildCertificateShareLink,
+} from '@/utils/certificateUtils'
 
 // Normalize URL to ensure it has a protocol (for existing data that might not have it)
 const normalizeUrl = (url) => {
@@ -68,6 +74,9 @@ export default function CourseCompletion() {
   const [userReview, setUserReview] = useState(null)
   const [recommendedCourses, setRecommendedCourses] = useState([])
   const [showCertificateModal, setShowCertificateModal] = useState(false)
+  const [certificateInlinePreviewUrl, setCertificateInlinePreviewUrl] = useState(null)
+  const [certificateInlinePreviewLoading, setCertificateInlinePreviewLoading] = useState(false)
+  const certificateInlinePreviewRef = useRef(null)
 
 
   // recommendedCourses are computed from actual courses
@@ -253,27 +262,27 @@ export default function CourseCompletion() {
         }
 
         setCompletionData(computed)
-        setLoading(false)
 
         // Show confetti only if all lessons are completed
         if (totalLessons > 0 && lessonsCompleted === totalLessons) {
           setShowConfetti(true)
           setTimeout(() => setShowConfetti(false), 3000)
-          // Ensure certificate exists
+          // Ensure certificate exists (before marking page ready so inline preview can load the real template)
           const { data: existingCert } = await actions.getCertificateForCourse(user.id, courseId)
           if (!existingCert) {
-            // Get default certificate template and generate certificate
-            const { data: templates } = await actions.fetchCertificateTemplates();
-            const defaultTemplate = templates?.find(t => t.is_default) || templates?.[0];
+            const { data: templates } = await actions.fetchCertificateTemplates()
+            const defaultTemplate = templates?.find((t) => t.is_default) || templates?.[0]
 
             if (defaultTemplate) {
-              await actions.generateCertificateFromTemplate(user.id, courseId, defaultTemplate.id);
+              await actions.generateCertificateFromTemplate(user.id, courseId, defaultTemplate.id)
             } else {
-              // Fallback to basic certificate creation if no template exists
-              await actions.createCertificate(user.id, courseId);
+              await actions.createCertificate(user.id, courseId)
             }
           }
         }
+
+        setLoading(false)
+
         // Compute recommended courses from actual data (prefer same category)
         try {
           let allCourses = courses
@@ -307,6 +316,73 @@ export default function CourseCompletion() {
     loadData()
   }, [courseId, user?.id, courses, actions])
 
+  // Inline certificate preview: same pipeline as CertificatePreviewModal (DB template + certificate_data)
+  useEffect(() => {
+    let cancelled = false
+
+    const loadInlinePreview = async () => {
+      if (!user?.id || !courseId || !completionData) {
+        setCertificateInlinePreviewLoading(false)
+        return
+      }
+      const { lessonsCompleted, totalLessons } = completionData
+      if (totalLessons <= 0 || lessonsCompleted < totalLessons) {
+        setCertificateInlinePreviewUrl(null)
+        setCertificateInlinePreviewLoading(false)
+        return
+      }
+
+      setCertificateInlinePreviewLoading(true)
+      try {
+        const { data: cert } = await actions.getCertificateForCourse(user.id, courseId)
+        if (!cert) {
+          if (!cancelled) {
+            setCertificateInlinePreviewUrl(null)
+          }
+          return
+        }
+
+        const { url } = await actions.generateCertificatePreview(cert.id)
+        if (cancelled) {
+          revokeObjectURL(url)
+          return
+        }
+        if (certificateInlinePreviewRef.current) {
+          revokeObjectURL(certificateInlinePreviewRef.current)
+        }
+        certificateInlinePreviewRef.current = url
+        setCertificateInlinePreviewUrl(url)
+      } catch {
+        if (!cancelled) {
+          setCertificateInlinePreviewUrl(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setCertificateInlinePreviewLoading(false)
+        }
+      }
+    }
+
+    if (!loading) {
+      loadInlinePreview()
+    }
+
+    return () => {
+      cancelled = true
+      if (certificateInlinePreviewRef.current) {
+        revokeObjectURL(certificateInlinePreviewRef.current)
+        certificateInlinePreviewRef.current = null
+      }
+    }
+  }, [
+    loading,
+    user?.id,
+    courseId,
+    completionData?.lessonsCompleted,
+    completionData?.totalLessons,
+    actions,
+  ])
+
   const formatTime = (minutes) => {
     const hours = Math.floor(minutes / 60)
     const mins = minutes % 60
@@ -314,45 +390,68 @@ export default function CourseCompletion() {
   }
 
   const handleDownloadCertificate = async () => {
+    if (!user?.id || !courseId) {
+      showError('You must be logged in to download your certificate.')
+      return
+    }
     try {
-      // Get the user's certificate for this course
-      const { data: userCertificate } = await actions.getCertificateForCourse(user.id, courseId);
-
-      if (userCertificate) {
-        // Generate and download the certificate with filled placeholders
-        const generateCertificatePreview = actions.generateCertificatePreview;
-        const { blob, filename } = await generateCertificatePreview(userCertificate.id);
-
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      } else {
-        console.error('No certificate found for this course');
+      const { data: userCertificate } = await actions.getCertificateForCourse(user.id, courseId)
+      if (!userCertificate) {
+        showError('No certificate found yet. If you just finished the course, try refreshing the page.')
+        return
       }
-    } catch (error) {
-      console.error('Error downloading certificate:', error);
-      // Fallback to mock download
-      window.open(completionData.certificate.downloadUrl, '_blank');
+      const { blob, filename } = await actions.generateCertificatePreview(userCertificate.id)
+      downloadBlob(blob, filename)
+      success('Certificate download started.')
+    } catch (err) {
+      showError(handleCertificateError(err, 'download certificate'))
     }
   }
 
-  const handleShareCertificate = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `I completed ${course.title}!`,
-        text: `I just completed "${course.title}" on Leadwise Academy and earned my certificate!`,
-        url: completionData.certificate.shareUrl
-      })
-    } else {
-      // Fallback to copying link
-      navigator.clipboard.writeText(completionData.certificate.shareUrl)
-      // Show toast notification
+  const handleShareCertificate = async () => {
+    if (!user?.id || !courseId) {
+      showError('You must be signed in to share your certificate.')
+      return
+    }
+    try {
+      const { data: cert } = await actions.getCertificateForCourse(user.id, courseId)
+      if (!cert) {
+        showError('Certificate not found. Finish the course or refresh the page.')
+        return
+      }
+      const { data: token, error: mintError } = await actions.mintCertificateShareToken(cert.id)
+      if (!token) {
+        showError(
+          mintError
+            ? handleCertificateError(mintError, 'create share link')
+            : 'Could not create a share link. Confirm the latest Supabase migrations are applied.'
+        )
+        return
+      }
+      const shareUrl = buildCertificateShareLink(token)
+      if (!shareUrl) {
+        showError('Could not build a valid share URL.')
+        return
+      }
+      const title = `I completed ${course?.title || 'a course'}!`
+      const text = `View my certificate for "${course?.title || 'a course'}" on Leadwise Academy:`
+      if (navigator.share) {
+        try {
+          await navigator.share({ title, text, url: shareUrl })
+          success('Shared successfully.')
+        } catch {
+          /* user cancelled */
+        }
+      } else {
+        try {
+          await navigator.clipboard.writeText(shareUrl)
+          success('Certificate link copied. Anyone with the link can view your certificate.')
+        } catch {
+          showError('Could not copy the link.')
+        }
+      }
+    } catch (err) {
+      showError(handleCertificateError(err, 'share certificate'))
     }
   }
 
@@ -431,29 +530,37 @@ export default function CourseCompletion() {
           
         </div>
 
-        <div 
-          className="max-w-md mx-auto rounded-lg p-8 mb-6 certificate-container"
-          style={{
-            background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.5) 27%, rgba(var(--color-primary-dark-rgb), 0.3) 50%)',
-            color: 'var(--color-text-dark)'
-          }}
-        >
-          <div className="text-center">
-            <Award className="w-12 h-12 mx-auto mb-4 certificate-icon" />
-            <h3 className="text-xl font-bold mb-2 certificate-title">Certificate of Completion</h3>
-            <p className="certificate-subtitle mb-4">This certifies that</p>
-            <p className="text-2xl font-bold mb-4 certificate-name">{user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || 'Student'}</p>
-            <p className="certificate-subtitle mb-2">has successfully completed</p>
-            <p className="font-semibold mb-4 certificate-course">{course.title}</p>
-            {completionData.completedAt && (
-              <p className="text-sm certificate-date">
-                Completed on {new Date(completionData.completedAt).toLocaleDateString()}
-              </p>
+        {completionData.totalLessons > 0 &&
+        completionData.lessonsCompleted >= completionData.totalLessons ? (
+          <div className="max-w-3xl mx-auto mb-6">
+            {certificateInlinePreviewLoading ? (
+              <div className="flex flex-col items-center justify-center min-h-[280px] rounded-xl border border-border bg-background-light">
+                <LoadingSpinner size="lg" />
+                <p className="mt-4 text-sm text-text-light">Loading certificate preview…</p>
+              </div>
+            ) : certificateInlinePreviewUrl ? (
+              <div className="rounded-xl border border-border bg-background-white shadow-md overflow-hidden">
+                <img
+                  src={certificateInlinePreviewUrl}
+                  alt={`Certificate for ${course?.title || 'course'}`}
+                  className="w-full h-auto object-contain max-h-[min(70vh,520px)] mx-auto block bg-background-medium"
+                />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border bg-background-light px-6 py-10 text-center">
+                <p className="text-text-medium mb-4">
+                  Certificate preview is not available. Open the full certificate to view or download it.
+                </p>
+              </div>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="max-w-md mx-auto rounded-lg border border-dashed border-border bg-background-light p-8 mb-6 text-center text-text-medium">
+            Complete all lessons to generate your certificate using the default template from Certificate Management.
+          </div>
+        )}
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
           <Button onClick={() => setShowCertificateModal(true)} size="lg">
             <Award className="w-5 h-5 mr-2" />
             View Certificate
@@ -461,6 +568,10 @@ export default function CourseCompletion() {
           <Button variant="secondary" onClick={handleShareCertificate} size="lg">
             <Share2 className="w-5 h-5 mr-2" />
             Share Certificate
+          </Button>
+          <Button variant="secondary" onClick={handleDownloadCertificate} size="lg">
+            <Download className="w-5 h-5 mr-2" />
+            Download
           </Button>
         </div>
       </Card>
