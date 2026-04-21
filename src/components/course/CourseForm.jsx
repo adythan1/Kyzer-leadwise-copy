@@ -44,6 +44,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
     learning_objectives: '',
     thumbnail_url: '',
     slug: '',
+    price: 0,
     is_public: false,
     is_free_trial: false,
     catalog_visible: true,
@@ -73,6 +74,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
           course.learning_objectives || '',
         thumbnail_url: course.thumbnail_url || '',
         slug: course.slug || '',
+        price: course.price ?? 0,
         is_public: course.is_public || false,
         is_free_trial: course.is_free_trial || false,
         catalog_visible: course.catalog_visible !== false,
@@ -167,6 +169,7 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
       const courseData = {
         ...formData,
         duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
+        price: formData.price !== '' ? parseFloat(formData.price) || 0 : 0,
         category_id: formData.category_id || null,
         catalog_visible: Boolean(formData.catalog_visible),
         restricted_organization_id: formData.restricted_organization_id?.trim() || null,
@@ -322,6 +325,24 @@ export default function CourseForm({ course = null, onSuccess, onCancel }) {
                 placeholder="e.g., 120"
                 min="0"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Price ($)
+              </label>
+              <Input
+                name="price"
+                type="number"
+                value={formData.price}
+                onChange={handleInputChange}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Set to 0 for a free course
+              </p>
             </div>
 
             <div>

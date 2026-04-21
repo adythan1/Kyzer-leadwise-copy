@@ -627,7 +627,9 @@ export default function CourseDetail() {
               
                 
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-2xl font-bold text-white-200 tabular-nums">${course.price || 'Free'}</span>
+                  <span className="text-2xl font-bold text-white-200 tabular-nums">
+                    {course.price > 0 ? `$${course.price}` : 'Free'}
+                  </span>
                   {course.originalPrice && (
                     <span className="text-lg text-gray-600 line-through">${course.originalPrice}</span>
                   )}

@@ -22,6 +22,7 @@ import {
   Gift,
   LayoutGrid,
   List,
+  DollarSign,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -36,6 +37,52 @@ import ResourcesQuickEditModal from '@/components/course/ResourcesQuickEditModal
 import { useToast } from '@/components/ui';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import CourseStructurePanel from '@/components/course/CourseStructurePanel';
+
+function InlinePrice({ course, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(course.price ?? 0);
+
+  const commit = async () => {
+    const parsed = parseFloat(value) || 0;
+    setEditing(false);
+    if (parsed === (course.price ?? 0)) return;
+    await onSave(course.id, parsed);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <DollarSign className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false); }}
+          autoFocus
+          className="w-20 rounded border border-blue-400 px-1.5 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+      className="flex items-center gap-1 rounded px-1 -mx-1 hover:bg-gray-100 transition-colors"
+      title="Click to edit price"
+    >
+      <DollarSign className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+      <span className={course.price > 0 ? 'font-medium text-gray-700' : 'text-green-600'}>
+        {course.price > 0 ? `$${Number(course.price).toFixed(2)}` : 'Free'}
+      </span>
+      <Edit className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </button>
+  );
+}
 
 export default function CourseManagement() {
   const { user } = useAuth();
@@ -59,6 +106,16 @@ export default function CourseManagement() {
   const deleteQuiz = useCourseStore(state => state.actions.deleteQuiz);
 
   const updateCourse = useCourseStore(state => state.actions.updateCourse);
+
+  const handlePriceSave = useCallback(async (courseId, newPrice) => {
+    const result = await updateCourse(courseId, { price: newPrice });
+    if (result.error) {
+      showError(result.error);
+    } else {
+      success(`Price updated to ${newPrice > 0 ? `$${newPrice.toFixed(2)}` : 'Free'}`);
+      if (user?.id) fetchCourses(user.id); else fetchCourses();
+    }
+  }, [updateCourse, fetchCourses, user?.id, success, showError]);
 
   const [showCourseForm, setShowCourseForm] = useState(false);
   const [showLessonForm, setShowLessonForm] = useState(false);
@@ -988,6 +1045,7 @@ export default function CourseManagement() {
                           {countsMap[course.id]?.modules ?? (courseModules[course.id]?.length || 0)} modules
                         </span>
                       </div>
+                      <InlinePrice course={course} onSave={handlePriceSave} />
                       {course.category && (
                         <span
                           className="rounded px-2 py-0.5 text-xs font-medium"
@@ -1044,6 +1102,7 @@ export default function CourseManagement() {
                       <FolderOpen className="w-4 h-4" />
                       <span>{countsMap[course.id]?.modules ?? (courseModules[course.id]?.length || 0)} modules</span>
                     </div>
+                    <InlinePrice course={course} onSave={handlePriceSave} />
                     {course.creator && (
                       <div className="flex items-center gap-1">
                         <Users className="w-4 h-4" />

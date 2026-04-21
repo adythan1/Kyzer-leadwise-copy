@@ -1226,7 +1226,7 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
                 <option value="video">Video</option>
                 <option value="text">Text</option>
                 <option value="presentation">Presentation (Multi-format)</option>
-                {/* <option value="scorm">SCORM Package</option> */}
+                <option value="scorm">SCORM package</option>
                 <option value="pdf">PDF</option>
                 <option value="ppt">PowerPoint</option>
                 <option value="image">Image</option>
@@ -1699,11 +1699,11 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
               </div>
             )}
 
-            {/* {formData.content_type === 'scorm' && (
+            {formData.content_type === 'scorm' && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    SCORM Package Upload
+                    SCORM package upload
                   </label>
                   <input
                     type="file"
@@ -1711,7 +1711,6 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
                     onChange={(e) => {
                       const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
                       setScormFile(file);
-                      // Clear existing content when new file is selected
                       if (file) {
                         setExistingContent(prev => ({ ...prev, scormUrl: '' }));
                       }
@@ -1719,7 +1718,7 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
                     className="block w-full text-sm text-gray-700"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Upload a SCORM 1.2 or 2004 compliant package (.zip file). Maximum size: 100MB.
+                    Upload a SCORM 1.2 or 2004 package (.zip). Typical limit 100MB — large packages may take longer to open for learners.
                   </p>
                 </div>
 
@@ -1744,23 +1743,15 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
                 )}
 
                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">SCORM Package Information</h4>
+                  <h4 className="text-sm font-medium text-blue-900 mb-2">SCORM package requirements</h4>
                   <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Must be a valid SCORM 1.2 or 2004 compliant package</li>
-                    <li>• Should contain imsmanifest.xml file in the root</li>
-                    <li>• All assets and resources should be included in the package</li>
-                    <li>• Package will be uploaded and made available to learners</li>
+                    <li>• Valid SCORM 1.2 or 2004 package with imsmanifest.xml</li>
+                    <li>• Include all assets referenced by the manifest</li>
+                    <li>• Learners open the package in the course player; progress can be saved with the lesson</li>
                   </ul>
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                    <p className="text-xs text-yellow-800">
-                      <strong>Note:</strong> SCORM packages require server-side processing for full functionality. 
-                      The package will be uploaded successfully and learners can access it, but full SCORM tracking 
-                      requires additional server configuration.
-                    </p>
-                  </div>
                 </div>
               </div>
-            )} */}
+            )}
 
             {formData.content_type === 'image' && (
               <div className="space-y-4">
@@ -2210,28 +2201,27 @@ export default function LessonForm({ lesson = null, courseId, onSuccess, onCance
                     </div>
                   )}
 
-                  {/* SCORM Preview */}
-                  {/* {formData.content_type === 'scorm' && existingContent.scormUrl && (
+                  {formData.content_type === 'scorm' && existingContent.scormUrl && (
                     <div className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Current SCORM Package</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Current SCORM package</h4>
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-blue-600 text-sm font-medium">ZIP</span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">SCORM Package</p>
+                          <p className="text-sm font-medium text-gray-900">SCORM package</p>
                           <a
                             href={existingContent.scormUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:text-blue-800"
                           >
-                            Download SCORM package
+                            Open or download package file
                           </a>
                         </div>
                       </div>
                     </div>
-                  )} */}
+                  )}
 
                   {/* Audio Attachment Preview */}
                   {existingContent.audioUrl && (
