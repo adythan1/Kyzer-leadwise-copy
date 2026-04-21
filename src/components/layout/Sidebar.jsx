@@ -18,7 +18,8 @@ import {
   Loader,
   PanelLeftClose,
   PanelLeftOpen,
-  FileEdit
+  FileEdit,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useCorporate } from "@/hooks/corporate/useCorporate";
@@ -28,7 +29,7 @@ import OrganizationNav from "./OrganizationNav";
 import leadwiseLogo from "../../assets/images/leadwise.svg";
 
 export default function Sidebar({ mobile = false, onClose, collapsed = false, onToggleCollapse }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { 
     organization, 
     isCorporateUser, 
@@ -85,6 +86,12 @@ export default function Sidebar({ mobile = false, onClose, collapsed = false, on
       icon: Settings 
     }
   ];
+
+  const isSystemAdmin = profile?.role === 'system_admin' || profile?.role === 'admin';
+
+  const adminNavigation = isSystemAdmin
+    ? [{ path: '/app/admin', label: 'Admin Panel', icon: Shield }]
+    : [];
 
   // Course Management navigation - separate section (only shown if user has permission)
   const courseManagementNavigation = canViewCourseManagement ? [
@@ -515,6 +522,27 @@ export default function Sidebar({ mobile = false, onClose, collapsed = false, on
 
         {/* Organization Navigation for Individual Users */}
         {!isCorporateUser && !collapsed && <OrganizationNav />}
+
+        {/* Admin Panel Navigation */}
+        {adminNavigation.length > 0 && (
+          <div className={`${collapsed ? 'px-2' : 'p-4'} border-b border-border p-3`}>
+            {!collapsed && (
+              <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">
+                Administration
+              </h3>
+            )}
+            <nav className={`space-y-1 ${collapsed ? 'space-y-2' : ''}`}>
+              {adminNavigation.map((route) => (
+                <NavItem
+                  key={route.path}
+                  route={route}
+                  onClick={mobile ? onClose : undefined}
+                  collapsed={collapsed}
+                />
+              ))}
+            </nav>
+          </div>
+        )}
 
         {/* Course Management Navigation - Separate Section */}
         {courseManagementNavigation.length > 0 && (

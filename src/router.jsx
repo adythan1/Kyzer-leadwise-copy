@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import CorporateGuard from "@/components/auth/CorporateGuard";
 import AdminGuard from "@/components/auth/AdminGuard";
 import CourseManagementGuard from "@/components/auth/CourseManagementGuard";
+import SystemAdminGuard from "@/components/auth/SystemAdminGuard";
 import AuthCallback from "@/pages/auth/AuthCallback";
 
 // Public Pages
@@ -38,6 +39,9 @@ import CourseManagement from "@/pages/courses/CourseManagement";
 import CategoriesManagement from "@/pages/courses/CategoriesManagement";
 import PresentationManagement from "@/pages/courses/PresentationManagement";
 import CertificateTemplates from "@/pages/courses/CertificateTemplates";
+
+// Admin Pages
+import AdminPanel from "@/pages/admin/AdminPanel";
 
 // Corporate Pages
 import CompanyDashboard from "@/pages/corporate/CompanyDashboard";
@@ -98,6 +102,14 @@ export const router = createBrowserRouter([
           { path: "profile", element: <Profile /> },
           { path: "settings", element: <Settings /> },
           { path: "editor/:courseId", element: <CourseEditor /> },
+          {
+            path: "admin",
+            element: (
+              <SystemAdminGuard>
+                <AdminPanel />
+              </SystemAdminGuard>
+            ),
+          },
 
                       {
               path: "courses",
