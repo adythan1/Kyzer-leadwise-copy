@@ -1573,10 +1573,26 @@ const useCourseStore = create((set, get) => ({
           }
         }
 
+        // Auto-scope corporate courses: if the creator belongs to an org
+        // and no explicit restriction was set, restrict to their org.
+        // Only platform-level admins (no org) create globally visible courses.
+        let orgRestriction = courseData.restricted_organization_id || null;
+        if (!orgRestriction && createdBy) {
+          const { data: creatorProfile } = await supabase
+            .from(TABLES.PROFILES)
+            .select('organization_id, role')
+            .eq('id', createdBy)
+            .maybeSingle();
+          if (creatorProfile?.organization_id && creatorProfile.role !== 'system_admin') {
+            orgRestriction = creatorProfile.organization_id;
+          }
+        }
+
         const { data, error } = await supabase
           .from(TABLES.COURSES)
           .insert({
             ...courseData,
+            restricted_organization_id: orgRestriction,
             created_by: createdBy,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),

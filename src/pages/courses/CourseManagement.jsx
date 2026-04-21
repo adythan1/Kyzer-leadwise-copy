@@ -85,7 +85,8 @@ function InlinePrice({ course, onSave }) {
 }
 
 export default function CourseManagement() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const enrichedUser = user ? { ...user, role: profile?.role, permissions: profile?.permissions } : null;
   const { success, error: showError, warning } = useToast();
   
   // Store selectors - individual to prevent infinite loops
@@ -885,11 +886,11 @@ export default function CourseManagement() {
           </Card>
         ) : (
           filteredCourses.map((course) => {
-            const canManage = canManageThisCourse(user, course);
-            const canPublish = hasPermission(user, PERMISSIONS.PUBLISH_COURSES);
-            const canEdit = hasPermission(user, PERMISSIONS.EDIT_COURSES);
-            const canDelete = hasPermission(user, PERMISSIONS.DELETE_COURSES);
-            const canManageResources = hasPermission(user, PERMISSIONS.MANAGE_RESOURCES);
+            const canManage = canManageThisCourse(enrichedUser, course);
+            const canPublish = hasPermission(enrichedUser, PERMISSIONS.PUBLISH_COURSES);
+            const canEdit = hasPermission(enrichedUser, PERMISSIONS.EDIT_COURSES);
+            const canDelete = hasPermission(enrichedUser, PERMISSIONS.DELETE_COURSES);
+            const canManageResources = hasPermission(enrichedUser, PERMISSIONS.MANAGE_RESOURCES);
 
             const courseActions = (
               <div

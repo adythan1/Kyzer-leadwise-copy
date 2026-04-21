@@ -182,7 +182,13 @@ export const useCorporateStore = create((set, get) => ({
             slug,
             email,
             created_by,
-            logo_url
+            logo_url,
+            industry,
+            size,
+            website,
+            description,
+            address,
+            phone
           )
         `
         )
@@ -599,16 +605,16 @@ export const useCorporateStore = create((set, get) => ({
         .update(updatePayload)
         .eq("id", currentCompany.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!organization) throw new Error("Update was blocked by database policy. Contact your administrator.");
 
       set({ currentCompany: organization, loading: false });
       toast.success("Company settings updated successfully");
 
       return organization;
     } catch (error) {
-      console.error("Error updating company:", error);
       set({ error: error.message, loading: false });
       toast.error("Failed to update company settings");
       throw error;
