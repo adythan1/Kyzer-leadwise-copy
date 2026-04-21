@@ -17,6 +17,13 @@ import Card from '@/components/ui/Card'
 import PageTitle from '@/components/layout/PageTitle'
 
 export default function Contact() {
+  const liveChatUrl = import.meta.env.VITE_CONTACT_LIVE_CHAT_URL || ''
+  const helpCenterUrl = import.meta.env.VITE_CONTACT_HELP_CENTER_URL || ''
+  const communityUrl = import.meta.env.VITE_CONTACT_COMMUNITY_URL || ''
+  const isLiveChatActive = liveChatUrl.trim().length > 0
+  const isHelpCenterActive = helpCenterUrl.trim().length > 0
+  const isCommunityActive = communityUrl.trim().length > 0
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,8 +83,8 @@ export default function Contact() {
       icon: MessageCircle,
       title: "Live Chat",
       description: "Get instant help with our live chat support",
-      contact: "Available 9 AM - 6 PM PST",
-      action: "#"
+      contact: isLiveChatActive ? "Start live chat support" : "Available soon",
+      action: isLiveChatActive ? liveChatUrl : null
     }
   ]
 
@@ -164,12 +171,20 @@ export default function Contact() {
                   </div>
                   <h3 className="text-xl font-semibold text-text-dark mb-3">{method.title}</h3>
                   <p className="text-text-light mb-4">{method.description}</p>
-                  <a
-                    href={method.action}
-                    className="text-primary-default font-medium hover:underline"
-                  >
-                    {method.contact}
-                  </a>
+                  {method.action ? (
+                    <a
+                      href={method.action}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-default font-medium hover:underline"
+                    >
+                      {method.contact}
+                    </a>
+                  ) : (
+                    <span className="text-text-muted font-medium">
+                      {method.contact}
+                    </span>
+                  )}
                 </Card>
               )
             })}
@@ -389,9 +404,17 @@ export default function Contact() {
               <p className="text-text-light mb-4">
                 Browse our comprehensive knowledge base and tutorials
               </p>
-              <Button variant="secondary">
-                Visit Help Center
-              </Button>
+              {isHelpCenterActive ? (
+                <a href={helpCenterUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="secondary">
+                    Visit Help Center
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="secondary" disabled>
+                  Help Center (Coming Soon)
+                </Button>
+              )}
             </Card>
             
             <Card className="p-6 text-center hover:shadow-lg transition-shadow">
@@ -400,9 +423,17 @@ export default function Contact() {
               <p className="text-text-light mb-4">
                 Connect with other users and get community support
               </p>
-              <Button variant="secondary">
-                Join Community
-              </Button>
+              {isCommunityActive ? (
+                <a href={communityUrl} target="_blank" rel="noopener noreferrer">
+                  <Button variant="secondary">
+                    Join Community
+                  </Button>
+                </a>
+              ) : (
+                <Button variant="secondary" disabled>
+                  Community (Coming Soon)
+                </Button>
+              )}
             </Card>
           </div>
         </div>

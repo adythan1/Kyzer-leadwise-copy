@@ -92,7 +92,7 @@ export default function CourseDetail() {
   const { courseId } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { isFreeTrial, canAccessCourse, canAccessCertificates } = useSubscription()
   // Store selectors - individual to prevent infinite loops
   const courses = useCourseStore(state => state.courses);
@@ -319,6 +319,10 @@ export default function CourseDetail() {
   )
 
   const isLocked = isFreeTrial && !canAccessCourse(course)
+  const isOwnOrgCourse =
+    Boolean(profile?.organization_id) &&
+    Boolean(course?.restricted_organization_id) &&
+    profile.organization_id === course.restricted_organization_id
 
   const heroRatingCount =
     ratingStats != null ? ratingStats.totalReviews : (course?.totalRatings ?? 0)
@@ -535,7 +539,7 @@ export default function CourseDetail() {
                 {course.category?.name || 'General'}
               </span>
               <span className="text-white/80 text-sm">{course.level || course.difficulty_level || 'Beginner'}</span>
-              {course.is_free_trial && (
+              {course.is_free_trial && !isLocked && (
                 <span className="bg-green-500/80 text-white px-3 py-1 rounded-full text-sm font-medium">
                   Free
                 </span>
@@ -628,7 +632,13 @@ export default function CourseDetail() {
                 
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <span className="text-2xl font-bold text-white-200 tabular-nums">
-                    {course.price > 0 ? `$${course.price}` : 'Free'}
+                    {isLocked
+                      ? 'Paid plan required'
+                      : course.price > 0
+                        ? `$${course.price}`
+                        : isOwnOrgCourse
+                          ? 'Included for your organization'
+                          : 'Free'}
                   </span>
                   {course.originalPrice && (
                     <span className="text-lg text-gray-600 line-through">${course.originalPrice}</span>

@@ -93,6 +93,17 @@ export default function Pricing() {
     return { planName, planType }
   }
 
+  const priceConfigSummary = (() => {
+    const entries = Object.entries(STRIPE_PRICES);
+    const missing = entries
+      .filter(([key]) => stripePriceConfigState(key) === 'missing')
+      .map(([key]) => stripePriceEnvVarName(key));
+    const invalid = entries
+      .filter(([key]) => stripePriceConfigState(key) === 'invalid')
+      .map(([key]) => stripePriceEnvVarName(key));
+    return { missing, invalid };
+  })();
+
   const handleSubscribe = async (stripePriceKey) => {
     const priceId = STRIPE_PRICES[stripePriceKey]
     const envName = stripePriceEnvVarName(stripePriceKey)
@@ -424,6 +435,32 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      {(priceConfigSummary.missing.length > 0 || priceConfigSummary.invalid.length > 0) && (
+        <section className="py-6 bg-amber-50 border-y border-amber-200">
+          <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Card className="p-5 bg-white border-amber-200">
+              <h3 className="text-base font-semibold text-amber-900 mb-2">
+                Billing configuration incomplete
+              </h3>
+              <p className="text-sm text-amber-800">
+                Some plans are disabled because Stripe price IDs are missing or invalid. Set the listed variables to valid
+                <code> price_...</code> values and redeploy.
+              </p>
+              {priceConfigSummary.missing.length > 0 && (
+                <p className="text-sm text-amber-800 mt-2">
+                  Missing: {priceConfigSummary.missing.join(', ')}
+                </p>
+              )}
+              {priceConfigSummary.invalid.length > 0 && (
+                <p className="text-sm text-amber-800 mt-1">
+                  Invalid (must start with <code>price_</code>): {priceConfigSummary.invalid.join(', ')}
+                </p>
+              )}
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* Individual Plans */}
       <section className="py-20 bg-background-light">
