@@ -565,14 +565,19 @@ const useCourseStore = create((set, get) => ({
       try {
         // Verify the user has access to this course based on their subscription
         const [profileResult, courseResult] = await Promise.all([
-          supabase.from(TABLES.PROFILES).select('subscription_plan').eq('id', userId).maybeSingle(),
-          supabase.from(TABLES.COURSES).select('is_free_trial').eq('id', courseId).maybeSingle(),
+          supabase.from(TABLES.PROFILES).select('subscription_plan, organization_id').eq('id', userId).maybeSingle(),
+          supabase.from(TABLES.COURSES).select('is_free_trial, restricted_organization_id').eq('id', courseId).maybeSingle(),
         ]);
 
         const userPlan = profileResult.data?.subscription_plan || 'free_trial';
+        const userOrgId = profileResult.data?.organization_id;
         const courseIsFreeTrial = courseResult.data?.is_free_trial;
+        const courseOrgId = courseResult.data?.restricted_organization_id;
 
-        if (userPlan === 'free_trial' && !courseIsFreeTrial) {
+        // Corporate users always get free access to their own org's courses
+        const isCorporateCourseAccess = userOrgId && courseOrgId && userOrgId === courseOrgId;
+
+        if (!isCorporateCourseAccess && userPlan === 'free_trial' && !courseIsFreeTrial) {
           return { data: null, error: 'A paid subscription is required to access this course. Please upgrade your plan.' };
         }
 
@@ -1575,8 +1580,10 @@ const useCourseStore = create((set, get) => ({
 
         // Auto-scope corporate courses: if the creator belongs to an org
         // and no explicit restriction was set, restrict to their org.
-        // Only platform-level admins (no org) create globally visible courses.
+        // Corporate courses are always free for their employees.
+        // Only system_admin courses are visible platform-wide (paid or free trial).
         let orgRestriction = courseData.restricted_organization_id || null;
+        let coursePrice = courseData.price;
         if (!orgRestriction && createdBy) {
           const { data: creatorProfile } = await supabase
             .from(TABLES.PROFILES)
@@ -1585,6 +1592,7 @@ const useCourseStore = create((set, get) => ({
             .maybeSingle();
           if (creatorProfile?.organization_id && creatorProfile.role !== 'system_admin') {
             orgRestriction = creatorProfile.organization_id;
+            coursePrice = 0;
           }
         }
 
@@ -1592,6 +1600,7 @@ const useCourseStore = create((set, get) => ({
           .from(TABLES.COURSES)
           .insert({
             ...courseData,
+            price: coursePrice ?? 0,
             restricted_organization_id: orgRestriction,
             created_by: createdBy,
             created_at: new Date().toISOString(),
