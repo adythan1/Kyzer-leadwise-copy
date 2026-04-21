@@ -87,7 +87,7 @@ export default function Sidebar({ mobile = false, onClose, collapsed = false, on
     }
   ];
 
-  const isSystemAdmin = profile?.role === 'system_admin' || profile?.role === 'admin';
+  const isSystemAdmin = profile?.role === 'system_admin';
 
   const adminNavigation = isSystemAdmin
     ? [{ path: '/app/admin', label: 'Admin Panel', icon: Shield }]

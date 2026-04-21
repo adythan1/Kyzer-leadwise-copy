@@ -13,8 +13,7 @@ export default function SystemAdminGuard({ children }) {
     );
   }
 
-  const isSystemAdmin =
-    profile?.role === 'system_admin' || profile?.role === 'admin';
+  const isSystemAdmin = profile?.role === 'system_admin';
 
   if (!isSystemAdmin) {
     return <Navigate to="/app/dashboard" replace />;

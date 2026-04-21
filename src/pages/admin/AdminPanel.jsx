@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, TABLES } from '@/lib/supabase';
 import { useAuth } from '@/hooks/auth/useAuth';
@@ -379,6 +379,10 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const { success, error: showError } = useToast();
+  const showErrorRef = useRef(showError);
+  showErrorRef.current = showError;
+  const successRef = useRef(success);
+  successRef.current = success;
 
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState(null);
@@ -425,18 +429,20 @@ export default function AdminPanel() {
         categories: categoriesRes.count ?? 0,
       });
     } catch {
-      showError('Failed to load dashboard stats');
+      showErrorRef.current('Failed to load dashboard stats');
     } finally {
       setLoadingStats(false);
     }
-  }, [showError]);
+  }, []);
 
   const loadUsers = useCallback(async () => {
     setLoadingUsers(true);
     try {
+      const selectFields = 'id, email, first_name, last_name, role, account_type, status, subscription_plan, created_at, organization_id';
+
       let query = supabase
         .from(TABLES.PROFILES)
-        .select('id, email, first_name, last_name, role, account_type, status, subscription_plan, created_at, organization_id, organization:organization_id(id, name)')
+        .select(`${selectFields}, organization:organization_id(id, name)`)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -444,22 +450,38 @@ export default function AdminPanel() {
         query = query.or(`email.ilike.%${userSearch}%,first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%`);
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
+      let { data, error } = await query;
+
+      if (error) {
+        let fallback = supabase
+          .from(TABLES.PROFILES)
+          .select(selectFields)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (userSearch.trim()) {
+          fallback = fallback.or(`email.ilike.%${userSearch}%,first_name.ilike.%${userSearch}%,last_name.ilike.%${userSearch}%`);
+        }
+
+        const result = await fallback;
+        if (result.error) throw result.error;
+        data = result.data;
+      }
+
       setUsers(data || []);
     } catch {
-      showError('Failed to load users');
+      showErrorRef.current('Failed to load users');
     } finally {
       setLoadingUsers(false);
     }
-  }, [userSearch, showError]);
+  }, [userSearch]);
 
   const loadOrganizations = useCallback(async () => {
     setLoadingOrgs(true);
     try {
       let query = supabase
         .from(TABLES.ORGANIZATIONS)
-        .select('id, name, slug, email, subscription_status, subscription_type, max_employees, created_at')
+        .select('id, name, slug, email, domain, subscription_status, max_employees, created_by, created_at')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -471,11 +493,11 @@ export default function AdminPanel() {
       if (error) throw error;
       setOrganizations(data || []);
     } catch {
-      showError('Failed to load organizations');
+      showErrorRef.current('Failed to load organizations');
     } finally {
       setLoadingOrgs(false);
     }
-  }, [orgSearch, showError]);
+  }, [orgSearch]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
@@ -524,19 +546,23 @@ export default function AdminPanel() {
       };
 
       if (userId) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from(TABLES.PROFILES)
           .update(payload)
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('id');
         if (error) throw error;
-        success('User updated successfully');
+        if (!data || data.length === 0) throw new Error('Update blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+        successRef.current('User updated successfully');
       } else {
         payload.email = form.email;
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from(TABLES.PROFILES)
-          .insert([payload]);
+          .insert([payload])
+          .select('id');
         if (error) throw error;
-        success('User created successfully');
+        if (!data || data.length === 0) throw new Error('Insert blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+        successRef.current('User created successfully');
       }
 
       setUserModalOpen(false);
@@ -554,17 +580,19 @@ export default function AdminPanel() {
     if (!deleteConfirm) return;
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLES.PROFILES)
         .delete()
-        .eq('id', deleteConfirm.id);
+        .eq('id', deleteConfirm.id)
+        .select('id');
       if (error) throw error;
-      success('User deleted successfully');
+      if (!data || data.length === 0) throw new Error('Delete blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+      successRef.current('User deleted successfully');
       setDeleteConfirm(null);
       loadUsers();
       loadStats();
-    } catch {
-      showError('Failed to delete user');
+    } catch (err) {
+      showError(err?.message || 'Failed to delete user');
     } finally {
       setSaving(false);
     }
@@ -572,43 +600,49 @@ export default function AdminPanel() {
 
   const handleInlineRoleChange = async (userId, newRole) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLES.PROFILES)
         .update({ role: newRole })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('id');
       if (error) throw error;
-      success(`Role updated to ${getRoleBadge(newRole).label}`);
+      if (!data || data.length === 0) throw new Error('Update blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+      successRef.current(`Role updated to ${getRoleBadge(newRole).label}`);
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-    } catch {
-      showError('Failed to update role');
+    } catch (err) {
+      showError(err?.message || 'Failed to update role');
     }
   };
 
   const handleInlinePlanChange = async (userId, plan) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLES.PROFILES)
         .update({ subscription_plan: plan })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('id');
       if (error) throw error;
-      success(`License updated to ${getPlanBadge(plan).label}`);
+      if (!data || data.length === 0) throw new Error('Update blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+      successRef.current(`License updated to ${getPlanBadge(plan).label}`);
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, subscription_plan: plan } : u))
       );
-    } catch {
-      showError('Failed to update license');
+    } catch (err) {
+      showError(err?.message || 'Failed to update license');
     }
   };
 
   const handleInlineStatusToggle = async (userId, currentStatus) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLES.PROFILES)
         .update({ status: newStatus })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('id');
       if (error) throw error;
-      success(`Status changed to ${newStatus}`);
+      if (!data || data.length === 0) throw new Error('Update blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+      successRef.current(`Status changed to ${newStatus}`);
       setUsers((prev) =>
         prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u))
       );
@@ -620,16 +654,18 @@ export default function AdminPanel() {
   const handleBulkLicense = async (userIds, plan) => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from(TABLES.PROFILES)
         .update({ subscription_plan: plan })
-        .in('id', userIds);
+        .in('id', userIds)
+        .select('id');
       if (error) throw error;
-      success(`${getPlanBadge(plan).label} license assigned to ${userIds.length} user${userIds.length !== 1 ? 's' : ''}`);
+      if (!data || data.length === 0) throw new Error('Update blocked by database policy. Run the admin RLS migration in Supabase SQL Editor.');
+      successRef.current(`${getPlanBadge(plan).label} license assigned to ${data.length} user${data.length !== 1 ? 's' : ''}`);
       setBulkLicenseOpen(false);
       loadUsers();
-    } catch {
-      showError('Failed to assign licenses');
+    } catch (err) {
+      showError(err?.message || 'Failed to assign licenses');
     } finally {
       setSaving(false);
     }
@@ -1053,8 +1089,8 @@ export default function AdminPanel() {
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Organization</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-600">Domain</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Subscription</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Max Employees</th>
                       <th className="text-left py-3 px-4 font-medium text-gray-600">Created</th>
                     </tr>
@@ -1068,6 +1104,9 @@ export default function AdminPanel() {
                             <p className="text-xs text-gray-500">{org.email || org.slug}</p>
                           </div>
                         </td>
+                        <td className="py-3 px-4 text-xs text-gray-600">
+                          {org.domain || '—'}
+                        </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                             org.subscription_status === 'active'
@@ -1078,9 +1117,6 @@ export default function AdminPanel() {
                           }`}>
                             {org.subscription_status || 'none'}
                           </span>
-                        </td>
-                        <td className="py-3 px-4 text-xs text-gray-600">
-                          {org.subscription_type || '—'}
                         </td>
                         <td className="py-3 px-4 text-xs text-gray-600">
                           {org.max_employees ?? '—'}

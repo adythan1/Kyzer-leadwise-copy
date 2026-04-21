@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, ChevronDown, Building, User2, Settings2, LayoutDashboard } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Building, User2, Settings2, LayoutDashboard, Shield } from "lucide-react";
 import { useAuth } from "@hooks/auth/useAuth";
 
 const UserMenu = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const isCorporateUser = user?.user_metadata?.account_type === "corporate";
+  const isSystemAdmin = profile?.role === 'system_admin';
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -122,8 +123,17 @@ const UserMenu = () => {
               Company Settings
             </Link>
 
-            {/* Switch Account Type (if applicable) */}
-         
+            {isSystemAdmin && (
+              <Link
+                to="/app/admin"
+                className="flex items-center px-4 py-2 text-sm text-text-medium hover:text-text-dark hover:bg-background-light transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Shield size={16} className="mr-3" />
+                Admin Panel
+              </Link>
+            )}
+
             <hr className="my-1 border-border" />
 
             <button
