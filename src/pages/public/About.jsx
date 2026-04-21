@@ -184,48 +184,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* Leadership Team */}
-      <section className="py-20">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-bold text-text-dark mb-4">Leadership Team</h2>
-            <p className="text-xl text-text-light">
-              Meet the team driving innovation in learning technology
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Sarah Chen",
-                role: "CEO & Co-Founder",
-                bio: "Former VP of Learning at Google, 15+ years in EdTech",
-                image: "👩‍💼"
-              },
-              {
-                name: "Marcus Rodriguez",
-                role: "CTO & Co-Founder", 
-                bio: "Ex-Principal Engineer at Spotify, Full-stack expert",
-                image: "👨‍💻"
-              },
-              {
-                name: "Dr. Emily Watson",
-                role: "Chief Learning Officer",
-                bio: "PhD in Educational Psychology, Former MIT researcher",
-                image: "👩‍🎓"
-              }
-            ].map((member, index) => (
-              <Card key={index} className="text-center p-8">
-                <div className="text-6xl mb-4">{member.image}</div>
-                <h3 className="text-xl font-semibold text-text-dark mb-2">{member.name}</h3>
-                <p className="text-primary-default font-medium mb-3">{member.role}</p>
-                <p className="text-text-light text-sm">{member.bio}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Call to Action */}
       <section className="py-20 bg-primary text-white">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
