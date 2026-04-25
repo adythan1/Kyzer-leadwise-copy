@@ -1,4 +1,3 @@
-// src/router.jsx - FIXED VERSION for AuthProvider pattern
 import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -54,8 +53,8 @@ import AcceptInvitation from "@/pages/corporate/AcceptInvitation";
 // Error Pages
 import NotFound from "@/components/common/NotFound";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
-import Certificates from "./pages/dashboard/Certificates";
-import Progress from "./pages/dashboard/Progress";
+import Certificates from "@/pages/dashboard/Certificates";
+import Progress from "@/pages/dashboard/Progress";
 import CourseEditor from "@/components/editor/CourseEditor";
 
 export const router = createBrowserRouter([
@@ -90,7 +89,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/auth/callback",
+        path: "auth/callback",
         element: <AuthCallback />,
       },
       // Individual User Routes
@@ -112,37 +111,37 @@ export const router = createBrowserRouter([
             ),
           },
 
-                      {
-              path: "courses",
-              children: [
-                { index: true, element: <MyCourses /> },
-                { path: "wishlist", element: <Wishlist /> },
-                { path: "catalog", element: <CourseCatalog /> },
-                { 
-                  path: "management", 
-                  element: (
-                    <CourseManagementGuard>
-                      <CourseManagement />
-                    </CourseManagementGuard>
-                  ) 
-                },
-                { path: "categories", element: <CategoriesManagement /> },
-                {
-                  path: "certificate-templates",
-                  element: (
-                    <CourseManagementGuard>
-                      <CertificateTemplates />
-                    </CourseManagementGuard>
-                  )
-                },
-                { path: ":courseId", element: <CourseDetail /> },
-                { path: ":courseId/learning", element: <Navigate to="../" replace /> },
-                { path: ":courseId/lesson/:lessonId/presentation", element: <PresentationManagement /> },
-                { path: ":courseId/lesson/:lessonId", element: <LessonView /> },
-                { path: ":courseId/quiz/:quizId", element: <QuizView /> },
-                { path: ":courseId/completion", element: <CourseCompletion /> },
-              ],
-            },
+          {
+            path: "courses",
+            children: [
+              { index: true, element: <MyCourses /> },
+              { path: "wishlist", element: <Wishlist /> },
+              { path: "catalog", element: <CourseCatalog /> },
+              {
+                path: "management",
+                element: (
+                  <CourseManagementGuard>
+                    <CourseManagement />
+                  </CourseManagementGuard>
+                ),
+              },
+              { path: "categories", element: <CategoriesManagement /> },
+              {
+                path: "certificate-templates",
+                element: (
+                  <CourseManagementGuard>
+                    <CertificateTemplates />
+                  </CourseManagementGuard>
+                ),
+              },
+              { path: ":courseId", element: <CourseDetail /> },
+              { path: ":courseId/learning", element: <Navigate to="../" replace /> },
+              { path: ":courseId/lesson/:lessonId/presentation", element: <PresentationManagement /> },
+              { path: ":courseId/lesson/:lessonId", element: <LessonView /> },
+              { path: ":courseId/quiz/:quizId", element: <QuizView /> },
+              { path: ":courseId/completion", element: <CourseCompletion /> },
+            ],
+          },
           { path: "progress", element: <Progress /> },
           { path: "certificates", element: <Certificates /> },
         ],
