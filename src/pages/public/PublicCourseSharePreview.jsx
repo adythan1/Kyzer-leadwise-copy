@@ -11,6 +11,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { apiGet } from '@/lib/apiClient';
 import { useAuth } from '@/hooks/auth/useAuth';
 import { useSubscription } from '@/hooks/courses/useSubscription';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -70,18 +71,10 @@ export default function PublicCourseSharePreview() {
       setFetchError(null);
 
       try {
-        const { data, error } = await supabase.rpc('get_course_share_preview', {
-          p_course_id: courseId,
-        });
+        const result = await apiGet(`/courses/${courseId}/share-preview`);
+        const data = result?.data ?? null;
 
         if (cancelled) return;
-
-        if (error) {
-          setFetchError(error.message || 'Could not load course preview.');
-          setNotFound(false);
-          setPreview(null);
-          return;
-        }
 
         if (data == null || (typeof data === 'object' && Object.keys(data).length === 0)) {
           setNotFound(true);
@@ -93,6 +86,11 @@ export default function PublicCourseSharePreview() {
         const row = typeof data === 'string' ? JSON.parse(data) : data;
         setFetchError(null);
         setPreview(row);
+      } catch (error) {
+        if (cancelled) return;
+        setFetchError(error?.message || 'Could not load course preview.');
+        setNotFound(false);
+        setPreview(null);
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -1,6 +1,7 @@
 // src/hooks/auth/useAuth.jsx - UPDATED with Email Validation & Enhanced Error Handling
 import { useState, useEffect, createContext, useContext, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
+import { apiPost } from "@/lib/apiClient";
 import toast from "react-hot-toast";
 
 const AuthContext = createContext();
@@ -528,26 +529,12 @@ const signup = useCallback(async (userData) => {
   // ✅ NEW: Email checking function
   const checkEmailExists = useCallback(async (email) => {
     try {
-      // Try to use the database function first
-      const { data, error } = await supabase.rpc('check_email_exists', { 
-        email_to_check: email 
-      });
-
-      if (error) {
-        console.error('Email check error:', error);
-        
-        // If function doesn't exist, return graceful fallback
-        if (error.message?.includes('function') || error.code === '42883') {
-          console.warn('check_email_exists function not found - email checking disabled');
-          return { exists: false, functionMissing: true };
-        }
-        
-        return { error: 'Failed to check email availability' };
-      }
-
-      return { exists: data === true };
-    } catch (error) {
-      console.error('Email availability check failed:', error);
+      const result = await apiPost('/auth/check-email', { email });
+      return {
+        exists: result?.exists === true,
+        functionMissing: result?.functionMissing === true,
+      };
+    } catch (_error) {
       return { error: 'Failed to check email availability' };
     }
   }, []);

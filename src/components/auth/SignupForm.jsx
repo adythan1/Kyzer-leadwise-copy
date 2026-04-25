@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/auth/useAuth";
 import { Button, Input } from "@/components/ui";
 import { Eye, EyeOff, AlertCircle, Clock, CheckCircle, X } from "lucide-react";
 import toast from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
+import { apiPost } from "@/lib/apiClient";
 
 // Validation schemas (same as before)
 const individualSchema = z.object({
@@ -70,18 +70,10 @@ export default function SignupForm({ accountType, onSuccess }) {
     setEmailCheckStatus('checking');
     
     try {
-      // Check in auth.users table (this requires a database function or RPC)
-      const { data, error } = await supabase.rpc('check_email_exists', { 
-        email_to_check: email 
-      });
+      const result = await apiPost('/auth/check-email', { email });
+      const emailExists = result?.exists === true;
 
-      if (error) {
-        console.error('Email check error:', error);
-        setEmailCheckStatus('idle');
-        return;
-      }
-
-      if (data === true) {
+      if (emailExists) {
         setEmailCheckStatus('taken');
         setError('email', { 
           type: 'manual', 
@@ -91,8 +83,7 @@ export default function SignupForm({ accountType, onSuccess }) {
         setEmailCheckStatus('available');
         clearErrors('email');
       }
-    } catch (error) {
-      console.error('Email availability check failed:', error);
+    } catch (_error) {
       setEmailCheckStatus('idle');
     }
   };

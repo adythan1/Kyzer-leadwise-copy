@@ -1,6 +1,7 @@
 // src/store/corporateStore.js
 import { create } from "zustand";
 import { supabase, STORAGE_BUCKETS } from "@/lib/supabase";
+import { apiPost, apiPostAuthed } from "@/lib/apiClient";
 import {
   getRasterImageFileExtension,
   isAllowedRasterImageType,
@@ -13,33 +14,14 @@ import { useAuthStore } from "./authStore";
 // Email service helper function using Supabase Edge Function
 const sendInvitationEmail = async (email, data) => {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Supabase configuration missing');
+    let response;
+    try {
+      response = await apiPostAuthed('/corporate/send-invitation-email', { email, data });
+    } catch {
+      // Fallback to anon request so server can still use anon key path.
+      response = await apiPost('/corporate/send-invitation-email', { email, data });
     }
-
-    // Try to get session, but don't fail if no auth
-    const { data: { session } } = await supabase.auth.getSession();
-    const authHeader = session ? `Bearer ${session.access_token}` : supabaseKey;
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-invitation-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
-        'apikey': supabaseKey
-      },
-      body: JSON.stringify({ email, data })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(errorData.error || `HTTP ${response.status}: Failed to send invitation email`);
-    }
-
-    const result = await response.json();
+    const result = response?.data || {};
     
     // Show user-friendly message based on result
     if (result.fallback || result.message?.includes('manual sending')) {
@@ -120,16 +102,13 @@ export const useCorporateStore = create((set, get) => ({
 
       // Try to call the RPC function to refresh cached members, but don't fail if it doesn't exist
       try {
-        const { error: rpcError } = await supabase.rpc('refresh_organization_members_cache', {
-          org_id: currentCompany.id
+        const response = await apiPostAuthed('/corporate/refresh-members-cache', {
+          orgId: currentCompany.id,
         });
+        const functionMissing = response?.functionMissing === true;
 
-        // If the function doesn't exist, that's okay - just refresh employees directly
-        if (rpcError && rpcError.code !== '42883' && rpcError.message?.includes('Could not find the function')) {
+        if (functionMissing) {
           // Function doesn't exist - that's fine, just continue with refresh
-        } else if (rpcError) {
-          // Other error - log but don't throw
-          console.warn("RPC function error (non-fatal):", rpcError);
         }
       } catch (rpcError) {
         // RPC function doesn't exist or other RPC error - that's okay
@@ -716,60 +695,21 @@ export const useCorporateStore = create((set, get) => ({
       // Password is only required for new users
       // If user already exists, we'll add them to organization without password
 
-      // Call Edge Function to create user
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase configuration missing');
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      const authHeader = session ? `Bearer ${session.access_token}` : supabaseKey;
-
-      let response;
-      try {
-        response = await fetch(`${supabaseUrl}/functions/v1/create-user-direct`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authHeader,
-            'apikey': supabaseKey
-          },
-          body: JSON.stringify({
-            email: userData.email,
-            password: userData.password,
-            firstName: userData.firstName || '',
-            lastName: userData.lastName || '',
-            role: userData.role || 'employee',
-            departmentId: userData.departmentId || null,
-            organizationId: currentCompany.id,
-            invitedBy: user.id
-          })
-        });
-      } catch (fetchError) {
-        // Network error or Edge Function not deployed
-        if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
-          throw new Error('Edge Function not deployed or network error. Please deploy the create-user-direct function to Supabase. See documentation for deployment instructions.');
+      const response = await apiPostAuthed(
+        '/corporate/create-user-direct',
+        {
+          email: userData.email,
+          password: userData.password,
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          role: userData.role || 'employee',
+          departmentId: userData.departmentId || null,
+          organizationId: currentCompany.id,
+          invitedBy: user.id
         }
-        throw fetchError;
-      }
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        
-        // Check if Edge Function is not deployed
-        if (response.status === 404 || response.status === 500) {
-          const errorMsg = errorData.error || 'Unknown error';
-          if (errorMsg.includes('function') || errorMsg.includes('not found') || response.status === 404) {
-            throw new Error('Edge Function not deployed. Please deploy the create-user-direct function to Supabase. See documentation for deployment instructions.');
-          }
-        }
-        
-        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create user`);
-      }
-
-      const result = await response.json();
+      const result = response?.data || {};
 
       // Refresh employees list
       await get().fetchEmployees();

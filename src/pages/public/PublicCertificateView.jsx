@@ -2,7 +2,7 @@
 // Public, no-login page: anyone with the share link can view the rendered certificate.
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { apiGet } from '@/lib/apiClient';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { revokeObjectURL, normalizeCertificateShareToken } from '@/utils/certificateUtils';
 
@@ -26,13 +26,8 @@ export default function PublicCertificateView() {
       }
 
       try {
-        const { data, error: rpcError } = await supabase.rpc('get_certificate_by_share_token', {
-          p_token: cleanToken,
-        });
-
-        if (rpcError) {
-          throw rpcError;
-        }
+        const result = await apiGet(`/certificates/${cleanToken}`);
+        const data = result?.data ?? null;
 
         if (
           data == null ||

@@ -1,6 +1,7 @@
 // src/store/courseStore.js
 import { create } from 'zustand';
 import { supabase, TABLES, safeQuery, getUserProfile } from '@/lib/supabase';
+import { apiPostAuthed } from '@/lib/apiClient';
 import { isMissingSchemaColumnError } from '@/utils/certificateUtils';
 
 const CERT_TEMPLATE_CORE_KEYS = [
@@ -1261,13 +1262,13 @@ const useCourseStore = create((set, get) => ({
      */
     mintCertificateShareToken: async (certificateId) => {
       try {
-        const { data, error } = await supabase.rpc('mint_certificate_share_token', {
-          p_certificate_id: certificateId,
-        });
-        if (error) {
-          throw error;
-        }
-        const token = typeof data === 'string' ? data : data != null ? String(data) : null;
+        const response = await apiPostAuthed(
+          `/certificates/${certificateId}/share-token`,
+          {}
+        );
+
+        const tokenData = response?.data ?? null;
+        const token = typeof tokenData === 'string' ? tokenData : tokenData != null ? String(tokenData) : null;
         return { data: token && token.length > 0 ? token : null, error: null };
       } catch (error) {
         return { data: null, error };
