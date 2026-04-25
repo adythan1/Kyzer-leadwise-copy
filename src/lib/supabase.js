@@ -76,6 +76,7 @@ export const TABLES = {
   COURSE_MODULES: 'course_modules',
   LESSONS: 'lessons',
   COURSE_ENROLLMENTS: 'course_enrollments',
+  COURSE_WISHLIST: 'course_wishlist',
   LESSON_PROGRESS: 'lesson_progress',
   
   // Quiz and Assessment

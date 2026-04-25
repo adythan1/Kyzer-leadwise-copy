@@ -62,6 +62,7 @@ export default function Sidebar({ mobile = false, onClose, collapsed = false, on
       icon: BookOpen,
       children: [
         { name: "Enrolled", href: "/app/courses" },
+        { name: "Wishlist", href: "/app/courses/wishlist" },
         { name: "Browse Catalog", href: "/app/courses/catalog" }
       ]
     },

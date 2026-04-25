@@ -106,6 +106,10 @@ export default function CourseDetail() {
   const fetchCourseModules = useCourseStore(state => state.actions.fetchCourseModules);
   const fetchCourseProgress = useCourseStore(state => state.actions.fetchCourseProgress);
   const fetchEnrolledCourses = useCourseStore(state => state.actions.fetchEnrolledCourses);
+  const wishlistCourses = useCourseStore(state => state.wishlistCourses);
+  const fetchWishlistCourses = useCourseStore(state => state.actions.fetchWishlistCourses);
+  const addToWishlist = useCourseStore(state => state.actions.addToWishlist);
+  const removeFromWishlist = useCourseStore(state => state.actions.removeFromWishlist);
   const fetchCourseReviews = useCourseStore(state => state.actions.fetchCourseReviews);
   const getCourseRatingStats = useCourseStore(state => state.actions.getCourseRatingStats);
   const getUserReview = useCourseStore(state => state.actions.getUserReview);
@@ -319,6 +323,7 @@ export default function CourseDetail() {
   )
 
   const isLocked = isFreeTrial && !canAccessCourse(course)
+  const isWishlisted = Boolean(wishlistCourses?.some((wishlistCourse) => wishlistCourse.id === courseId))
   const isOwnOrgCourse =
     Boolean(profile?.organization_id) &&
     Boolean(course?.restricted_organization_id) &&
@@ -380,6 +385,12 @@ export default function CourseDetail() {
       fetchEnrolledCourses(user.id)
     }
   }, [user?.id, fetchEnrolledCourses])
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchWishlistCourses(user.id)
+    }
+  }, [user?.id, fetchWishlistCourses])
 
   useEffect(() => {
     // Fetch courses if not already loaded or if current course is not in store
@@ -454,6 +465,23 @@ export default function CourseDetail() {
       await enrollInCourse(user.id, courseId)
     } catch (error) {
       // Handle error silently or set error state if needed
+    }
+  }
+
+  const handleToggleWishlist = async () => {
+    if (!user?.id) {
+      navigate('/login')
+      return
+    }
+
+    if (!courseId) return
+
+    if (isWishlisted) {
+      await removeFromWishlist(user.id, courseId)
+      success('Removed from wishlist.')
+    } else {
+      await addToWishlist(user.id, courseId)
+      success('Added to wishlist.')
     }
   }
 
@@ -674,9 +702,9 @@ export default function CourseDetail() {
                     <Crown className="w-4 h-4 mr-2" />
                     View Paid Plans
                   </Button>
-                  <Button variant="ghost" className="w-full">
+                  <Button variant="ghost" className="w-full" onClick={handleToggleWishlist}>
                     <Heart className="w-4 h-4 mr-2" />
-                    Add to Wishlist
+                    {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </Button>
                 </div>
               ) : isEnrolled ? (
@@ -742,9 +770,9 @@ export default function CourseDetail() {
                   <Button className="w-full" size="lg" onClick={handleEnroll}>
                     Enroll Now
                   </Button>
-                  <Button variant="ghost" className="w-full">
+                  <Button variant="ghost" className="w-full" onClick={handleToggleWishlist}>
                     <Heart className="w-4 h-4 mr-2" />
-                    Add to Wishlist
+                    {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </Button>
                 </div>
               )}

@@ -69,6 +69,7 @@ const useCourseStore = create((set, get) => ({
   // State
   courses: [],
   enrolledCourses: [],
+  wishlistCourses: [],
   currentCourse: null,
   currentLesson: null,
   courseProgress: {},
@@ -80,6 +81,7 @@ const useCourseStore = create((set, get) => ({
   loading: {
     courses: false,
     enrollments: false,
+    wishlist: false,
     progress: false,
     quiz: false,
     quizzes: false,
@@ -554,6 +556,97 @@ const useCourseStore = create((set, get) => ({
           loading: { ...state.loading, enrollments: false },
         }));
         return { data: [], error };
+      }
+    },
+
+    // Fetch user's wishlist courses
+    fetchWishlistCourses: async (userId) => {
+      if (!userId) return { data: [], error: null };
+      set((state) => ({
+        loading: { ...state.loading, wishlist: true },
+        error: null,
+      }));
+      try {
+        const { data, error } = await supabase
+          .from(TABLES.COURSE_WISHLIST)
+          .select(`
+            id,
+            created_at,
+            course:${TABLES.COURSES} (
+              *,
+              category:${TABLES.COURSE_CATEGORIES}(id, name, color),
+              creator:${TABLES.PROFILES}(id, first_name, last_name, email)
+            )
+          `)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const wishlistCourses = (data || [])
+          .filter((row) => row.course)
+          .map((row) => ({
+            ...row.course,
+            wishlist_item_id: row.id,
+            wishlisted_at: row.created_at,
+          }));
+
+        set((state) => ({
+          wishlistCourses,
+          loading: { ...state.loading, wishlist: false },
+        }));
+
+        return { data: wishlistCourses, error: null };
+      } catch (error) {
+        set((state) => ({
+          wishlistCourses: [],
+          loading: { ...state.loading, wishlist: false },
+          error: error.message,
+        }));
+        return { data: [], error };
+      }
+    },
+
+    // Add course to wishlist
+    addToWishlist: async (userId, courseId) => {
+      try {
+        const { data, error } = await supabase
+          .from(TABLES.COURSE_WISHLIST)
+          .insert({
+            user_id: userId,
+            course_id: courseId,
+            created_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+
+        // Refresh wishlist to keep course data consistent
+        await get().actions.fetchWishlistCourses(userId);
+        return { data, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+
+    // Remove course from wishlist
+    removeFromWishlist: async (userId, courseId) => {
+      try {
+        const { error } = await supabase
+          .from(TABLES.COURSE_WISHLIST)
+          .delete()
+          .eq('user_id', userId)
+          .eq('course_id', courseId);
+
+        if (error) throw error;
+
+        set((state) => ({
+          wishlistCourses: state.wishlistCourses.filter((c) => c.id !== courseId),
+        }));
+        return { data: true, error: null };
+      } catch (error) {
+        return { data: null, error };
       }
     },
 

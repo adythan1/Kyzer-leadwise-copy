@@ -33,6 +33,7 @@ import CourseDetail from "@/pages/courses/CourseDetail";
 import LessonView from "@/pages/courses/LessonView";
 import QuizView from "@/pages/courses/QuizView";
 import MyCourses from "@/pages/courses/MyCourses";
+import Wishlist from "@/pages/courses/Wishlist";
 import CourseCompletion from "@/pages/courses/CourseCompletion";
 import CourseLearning from "@/pages/courses/CourseLearning";
 import CourseManagement from "@/pages/courses/CourseManagement";
@@ -115,6 +116,7 @@ export const router = createBrowserRouter([
               path: "courses",
               children: [
                 { index: true, element: <MyCourses /> },
+                { path: "wishlist", element: <Wishlist /> },
                 { path: "catalog", element: <CourseCatalog /> },
                 { 
                   path: "management", 
@@ -216,6 +218,7 @@ export const navigationRoutes = {
   individual: [
     { path: "/app/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
     { path: "/app/courses", label: "My Courses", icon: "BookOpen" },
+    { path: "/app/courses/wishlist", label: "Wishlist", icon: "Heart" },
     { path: "/app/courses/catalog", label: "Course Catalog", icon: "Search" },
     { path: "/app/courses/management", label: "Course Management", icon: "Settings", permission: "manage_courses" },
     { path: "/app/progress", label: "Progress", icon: "TrendingUp" },
