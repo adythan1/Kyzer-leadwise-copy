@@ -17,7 +17,7 @@ serve(async (req) => {
       apiVersion: '2023-10-16',
     })
 
-    const { priceId, customerEmail, userId, planName, planType, successUrl, cancelUrl } = await req.json()
+    const { priceId, quantity, customerEmail, userId, planName, planType, successUrl, cancelUrl } = await req.json()
 
     if (!priceId) {
       return new Response(
@@ -26,16 +26,22 @@ serve(async (req) => {
       )
     }
 
+    const parsedQuantity = Number(quantity)
+    const safeQuantity = Number.isFinite(parsedQuantity)
+      ? Math.max(1, Math.floor(parsedQuantity))
+      : 1
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: safeQuantity }],
       success_url: successUrl || `${Deno.env.get('VITE_APP_URL') || 'http://localhost:5173'}/pricing?session_id={CHECKOUT_SESSION_ID}&status=success`,
       cancel_url: cancelUrl || `${Deno.env.get('VITE_APP_URL') || 'http://localhost:5173'}/pricing?status=cancelled`,
       metadata: {
         userId: userId || '',
         planName: planName || '',
         planType: planType || 'individual',
+        quantity: String(safeQuantity),
       },
     }
 

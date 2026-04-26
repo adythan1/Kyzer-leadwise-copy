@@ -27,13 +27,21 @@ export const getStripe = () => {
  * @param {string} priceId - Stripe price ID
  * @param {string} planName - Plan name (starter, pro, premium, team, business)
  * @param {string} planType - Plan type (individual or corporate)
+ * @param {number} quantity - Checkout quantity (used for tiered seat pricing)
  */
-export const redirectToCheckout = async (priceId, planName = '', planType = 'individual') => {
+export const redirectToCheckout = async (
+  priceId,
+  planName = '',
+  planType = 'individual',
+  quantity = 1
+) => {
   const { data: { session } } = await supabase.auth.getSession()
+  const safeQuantity = Number.isFinite(Number(quantity)) ? Math.max(1, Math.floor(Number(quantity))) : 1
 
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: {
       priceId,
+      quantity: safeQuantity,
       customerEmail: session?.user?.email,
       userId: session?.user?.id,
       planName,

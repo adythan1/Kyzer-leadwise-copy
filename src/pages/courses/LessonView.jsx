@@ -735,9 +735,11 @@ export default function LessonView() {
   const [finalAssessmentCompleted, setFinalAssessmentCompleted] = useState(false)
   const { success, error: showError } = useToast()
 
-  // Live session timer - ticks every second, pauses when tab is hidden
+  // Live session timer - ticks every second, pauses when lesson view is blocked
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [isTimerPaused, setIsTimerPaused] = useState(false)
   const isPageVisibleRef = useRef(true)
+  const isWindowFocusedRef = useRef(true)
   const timerInitLessonRef = useRef(null)
 
   // Initialize elapsed time from saved progress when lesson changes
@@ -757,25 +759,40 @@ export default function LessonView() {
     }
   }, [lesson?.id, course?.id, courseProgress])
 
-  // 1-second tick that pauses when the tab/window is hidden
+  // 1-second tick that pauses when the tab/window is hidden or unfocused
   useEffect(() => {
     if (!lesson?.id || !user?.id) return
 
     isPageVisibleRef.current = document.visibilityState === 'visible'
+    isWindowFocusedRef.current = document.hasFocus()
+    setIsTimerPaused(!(isPageVisibleRef.current && isWindowFocusedRef.current))
 
     const handleVisibility = () => {
       isPageVisibleRef.current = document.visibilityState === 'visible'
+      setIsTimerPaused(!(isPageVisibleRef.current && isWindowFocusedRef.current))
+    }
+    const handleWindowBlur = () => {
+      isWindowFocusedRef.current = false
+      setIsTimerPaused(true)
+    }
+    const handleWindowFocus = () => {
+      isWindowFocusedRef.current = true
+      setIsTimerPaused(!(isPageVisibleRef.current && isWindowFocusedRef.current))
     }
     document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('focus', handleWindowFocus)
 
     const tickId = setInterval(() => {
-      if (isPageVisibleRef.current) {
+      if (isPageVisibleRef.current && isWindowFocusedRef.current) {
         setElapsedSeconds(prev => prev + 1)
       }
     }, 1000)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('focus', handleWindowFocus)
       clearInterval(tickId)
     }
   }, [lesson?.id, user?.id])
@@ -3363,7 +3380,7 @@ export default function LessonView() {
                   {timeRemainingInfo && !timeRequirementMet && (
                     <div className="inline-flex items-center gap-1.5 text-warning-default text-xs font-medium">
                       <span className="font-mono tabular-nums">{formatElapsedTime(timeRemainingInfo.timeRemaining)}</span>
-                      <span>remaining</span>
+                      <span>{isTimerPaused ? 'paused' : 'remaining'}</span>
                     </div>
                   )}
                 </div>
@@ -3386,9 +3403,14 @@ export default function LessonView() {
               <div className="flex items-center justify-between gap-3 bg-warning-light px-3 py-2 rounded-lg mt-3">
                 <div className="flex items-center gap-2 text-warning-default">
                   <Clock className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">
-                    Review this lesson for at least {timeRemainingInfo.totalMinutesRequired} min before proceeding
-                  </span>
+                  <div className="text-sm">
+                    <span>
+                      Review this lesson for at least {timeRemainingInfo.totalMinutesRequired} min before proceeding.
+                    </span>
+                    <span className="ml-1 font-medium">
+                      {isTimerPaused ? 'Timer paused while lesson view is blocked.' : 'Timer running.'}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-warning-default/20 h-1.5 rounded-full overflow-hidden">

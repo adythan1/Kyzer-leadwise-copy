@@ -104,7 +104,7 @@ export default function Pricing() {
     return { missing, invalid };
   })();
 
-  const handleSubscribe = async (stripePriceKey) => {
+  const handleSubscribe = async (stripePriceKey, options = {}) => {
     const priceId = STRIPE_PRICES[stripePriceKey]
     const envName = stripePriceEnvVarName(stripePriceKey)
     if (!priceId || !String(priceId).trim()) {
@@ -121,10 +121,13 @@ export default function Pricing() {
     }
 
     const { planName, planType } = resolvePlanInfo(stripePriceKey)
+    const quantity = Number.isFinite(Number(options.quantity))
+      ? Math.max(1, Math.floor(Number(options.quantity)))
+      : 1
 
     setLoadingPlan(stripePriceKey)
     try {
-      await redirectToCheckout(priceId, planName, planType)
+      await redirectToCheckout(priceId, planName, planType, quantity)
     } catch (error) {
       toast.error(error.message || 'Something went wrong. Please try again.')
     } finally {
@@ -205,6 +208,7 @@ export default function Pricing() {
       originalPrice: billingCycle === 'annual' ? 180 : null,
       description: "Perfect for small teams and startups",
       userRange: "5-50 users",
+      checkoutQuantity: 5,
       stripePriceKey: billingCycle === 'monthly' ? 'team_monthly' : 'team_annual',
       features: [
         "All Pro features for team members",
@@ -229,6 +233,7 @@ export default function Pricing() {
       originalPrice: billingCycle === 'annual' ? 300 : null,
       description: "Advanced features for growing companies",
       userRange: "50-200 users",
+      checkoutQuantity: 50,
       stripePriceKey: billingCycle === 'monthly' ? 'business_monthly' : 'business_annual',
       features: [
         "Everything in Team",
@@ -278,7 +283,9 @@ export default function Pricing() {
 
     const handleClick = () => {
       if (isEnterprise) return
-      handleSubscribe(plan.stripePriceKey)
+      handleSubscribe(plan.stripePriceKey, {
+        quantity: type === 'corporate' ? (plan.checkoutQuantity || 1) : 1
+      })
     }
     
     return (
