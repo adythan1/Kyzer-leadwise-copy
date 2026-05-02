@@ -1,7 +1,15 @@
 import "dotenv/config";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import { createClient } from "@supabase/supabase-js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distDir = path.resolve(__dirname, "..", "dist");
+const hasDist = fs.existsSync(distDir);
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -363,6 +371,28 @@ app.post("/api/corporate/refresh-members-cache", async (req, res) => {
     });
   }
 });
+
+if (hasDist) {
+  app.use(
+    express.static(distDir, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith("index.html")) {
+          res.setHeader("Cache-Control", "no-cache");
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    })
+  );
+
+  app.use((req, res, next) => {
+    if (req.method !== "GET") return next();
+    if (req.path.startsWith("/api/")) return next();
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(distDir, "index.html"));
+  });
+}
 
 app.use((_req, res) => {
   res.status(404).json({ ok: false, error: "Route not found." });
