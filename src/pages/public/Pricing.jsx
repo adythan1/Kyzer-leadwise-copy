@@ -460,44 +460,8 @@ export default function Pricing() {
             title="Simple, Transparent Pricing"
             titleClassName="!text-white"
             subtitle="Choose the perfect plan for your learning journey. No hidden fees, cancel anytime, and scale as you grow."
-            subtitleWrapperClassName="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-3xl mx-auto"
+            subtitleWrapperClassName="text-base sm:text-lg md:text-xl text-gray-200 max-w-3xl mx-auto"
           />
-
-          {/* Audience Tabs */}
-          <div
-            role="tablist"
-            aria-label="Pricing audience"
-            className="inline-flex items-center bg-white/10 rounded-lg p-1 max-w-full"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={audience === 'individual'}
-              onClick={() => setAudience('individual')}
-              className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                audience === 'individual'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-white hover:text-gray-200'
-              }`}
-            >
-              <Star className="w-4 h-4 flex-shrink-0" />
-              Individuals
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={audience === 'corporate'}
-              onClick={() => setAudience('corporate')}
-              className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                audience === 'corporate'
-                  ? 'bg-white text-primary shadow-sm'
-                  : 'text-white hover:text-gray-200'
-              }`}
-            >
-              <Building2 className="w-4 h-4 flex-shrink-0" />
-              Companies
-            </button>
-          </div>
         </div>
       </section>
 
@@ -530,43 +494,102 @@ export default function Pricing() {
       {/* Plans for active audience */}
       <section className="py-12 sm:py-16 md:py-20 bg-background-light">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl font-bold text-text-dark mb-3 sm:mb-4">{audienceCopy.heading}</h2>
-            <p className="text-base sm:text-lg md:text-xl text-text-medium max-w-2xl mx-auto">
-              {audienceCopy.subheading}
-            </p>
-          </div>
+          {/* Inline controls row: audience tabs (center) + billing toggle (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 items-center gap-6 mb-10 sm:mb-14">
+            <div className="hidden lg:block" aria-hidden="true" />
 
-          {/* Billing Cycle Toggle */}
-          <div className="flex flex-col items-center mb-10 sm:mb-12">
-            <div className="inline-flex items-center bg-white border border-background-dark rounded-lg p-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-4 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all ${
-                  billingCycle === 'monthly'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-text-medium hover:text-text-dark'
-                }`}
+            {/* Audience tabs — sliding pill, light theme */}
+            <div className="flex justify-center">
+              <div
+                role="tablist"
+                aria-label="Pricing audience"
+                className="relative inline-flex items-center bg-white border border-background-dark rounded-full p-1 shadow-sm max-w-full"
               >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingCycle('annual')}
-                className={`px-4 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all ${
-                  billingCycle === 'annual'
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-text-medium hover:text-text-dark'
-                }`}
-              >
-                Annual
-              </button>
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full bg-primary shadow-md transition-transform duration-300 ease-out ${
+                    audience === 'corporate' ? 'translate-x-full' : 'translate-x-0'
+                  }`}
+                />
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={audience === 'individual'}
+                  onClick={() => setAudience('individual')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 min-w-[140px] sm:min-w-[160px] px-4 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
+                    audience === 'individual'
+                      ? 'text-white'
+                      : 'text-text-medium hover:text-text-dark'
+                  }`}
+                >
+                  <Star className="w-4 h-4 flex-shrink-0" />
+                  Individuals
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={audience === 'corporate'}
+                  onClick={() => setAudience('corporate')}
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 min-w-[140px] sm:min-w-[160px] px-4 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
+                    audience === 'corporate'
+                      ? 'text-white'
+                      : 'text-text-medium hover:text-text-dark'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4 flex-shrink-0" />
+                  Companies
+                </button>
+              </div>
             </div>
-            <p className="mt-3 text-sm">
-              <span className="font-semibold text-success-default">Save 20%</span>
-              <span className="text-text-medium"> on a yearly subscription</span>
-            </p>
+
+            {/* Billing toggle — iOS-style switch with inline savings caption */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('monthly')}
+                  className={`text-sm sm:text-base font-semibold transition-colors ${
+                    billingCycle === 'monthly'
+                      ? 'text-text-dark'
+                      : 'text-text-muted hover:text-text-medium'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={billingCycle === 'annual'}
+                  aria-label="Toggle billing cycle"
+                  onClick={() =>
+                    setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')
+                  }
+                  className="relative inline-flex h-7 w-12 items-center rounded-full bg-primary shadow-inner transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ease-out ${
+                      billingCycle === 'annual' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillingCycle('annual')}
+                  className={`text-sm sm:text-base font-semibold transition-colors ${
+                    billingCycle === 'annual'
+                      ? 'text-text-dark'
+                      : 'text-text-muted hover:text-text-medium'
+                  }`}
+                >
+                  Annual
+                </button>
+                <span className="text-sm text-text-medium">
+                  <span className="font-semibold text-success">Save 20%</span>
+                  <span className="hidden sm:inline"> with annual</span>
+                </span>
+              </div>
+            </div>
           </div>
 
           <div
