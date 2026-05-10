@@ -74,7 +74,7 @@ export default function Layout() {
         {/* Main Content */}
         <main className={`flex-1 transition-all duration-300 ease-in-out ${
           user ? (desktopSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-60') : ''
-        }`}>
+        }`} style={{width:'stretch'}}>
           <div className={`${desktopSidebarCollapsed ? 'w-full' : 'max-w-8xl mx-auto'} px-2 lg:px-2 pb-10 lg:pb-6`}>
             <Breadcrumbs />
             <Outlet />

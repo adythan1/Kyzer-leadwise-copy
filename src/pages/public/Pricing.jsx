@@ -450,7 +450,7 @@ export default function Pricing() {
   ]
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary-dark to-primary text-white py-12 sm:py-16 md:py-20">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -499,7 +499,7 @@ export default function Pricing() {
             <div className="hidden lg:block" aria-hidden="true" />
 
             {/* Audience tabs — sliding pill, light theme */}
-            <div className="flex justify-center">
+            <div className="flex justify-center min-w-0">
               <div
                 role="tablist"
                 aria-label="Pricing audience"
@@ -516,7 +516,7 @@ export default function Pricing() {
                   role="tab"
                   aria-selected={audience === 'individual'}
                   onClick={() => setAudience('individual')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 min-w-[140px] sm:min-w-[160px] px-4 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 sm:gap-2 sm:min-w-[140px] md:min-w-[160px] px-3 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
                     audience === 'individual'
                       ? 'text-white'
                       : 'text-text-medium hover:text-text-dark'
@@ -530,7 +530,7 @@ export default function Pricing() {
                   role="tab"
                   aria-selected={audience === 'corporate'}
                   onClick={() => setAudience('corporate')}
-                  className={`relative z-10 flex-1 flex items-center justify-center gap-2 min-w-[140px] sm:min-w-[160px] px-4 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
+                  className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 sm:gap-2 sm:min-w-[140px] md:min-w-[160px] px-3 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-colors duration-200 ${
                     audience === 'corporate'
                       ? 'text-white'
                       : 'text-text-medium hover:text-text-dark'
@@ -543,7 +543,7 @@ export default function Pricing() {
             </div>
 
             {/* Billing toggle — iOS-style switch with inline savings caption */}
-            <div className="flex justify-center lg:justify-end">
+            <div className="flex justify-center lg:justify-end min-w-0">
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 sm:gap-x-4">
                 <button
                   type="button"
