@@ -59,6 +59,7 @@ function stripePriceConfigState(stripePriceKey) {
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState('monthly')
+  const [audience, setAudience] = useState('individual')
   const [loadingPlan, setLoadingPlan] = useState(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const { refreshUser } = useAuth()
@@ -289,53 +290,63 @@ export default function Pricing() {
     }
     
     return (
-      <Card className={`relative p-8 ${plan.popular ? 'ring-2 ring-primary-default shadow-lg scale-105' : ''}`}>
+      <Card
+        className={`relative overflow-hidden p-6 sm:p-8 ${
+          plan.popular
+            ? 'ring-2 ring-primary shadow-xl shadow-primary/20 md:scale-105 bg-gradient-to-br from-primary-light/40 via-background-white to-primary/10'
+            : ''
+        }`}
+      >
         {plan.popular && (
-          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-            <span className="bg-primary-default text-white px-4 py-1 rounded-full text-sm font-medium">
-              Most Popular
-            </span>
+          <div
+            aria-label="Most popular plan"
+            className="pointer-events-none absolute -right-12 top-6 rotate-45 bg-primary text-white text-[11px] font-bold uppercase tracking-wider px-14 py-1 shadow-md"
+          >
+            Most Popular
           </div>
         )}
-        
+
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-              plan.popular ? 'bg-primary-default text-white' : 'bg-background-light text-primary-default'
+              plan.popular ? 'bg-primary text-white' : 'bg-background-light text-primary'
             }`}>
               <Icon className="w-6 h-6" />
             </div>
           </div>
-          
-          <h3 className="text-2xl font-bold text-text-dark mb-2">{plan.name}</h3>
-          <p className="text-text-light mb-4">{plan.description}</p>
-          
+
+          <h3 className="text-xl sm:text-2xl font-bold text-text-dark mb-2">{plan.name}</h3>
+          <p className="text-text-medium text-sm sm:text-base mb-4">{plan.description}</p>
+
           {type === 'corporate' && (
-            <p className="text-sm text-primary-default font-medium mb-4">{plan.userRange}</p>
+            <p className="text-sm text-primary font-medium mb-4">{plan.userRange}</p>
           )}
-          
+
           <div className="mb-6">
             {isEnterprise ? (
               <div className="text-2xl font-bold text-text-dark">Custom Pricing</div>
             ) : (
-              <>
-                <div className="text-4xl font-bold text-text-dark">
-                  ${plan.price}
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl sm:text-5xl font-bold text-text-dark leading-none">
+                    ${plan.price}
+                  </span>
                   {plan.originalPrice && (
-                    <span className="text-lg text-text-muted line-through ml-2">
+                    <span className="text-base sm:text-lg text-text-muted line-through font-semibold">
                       ${plan.originalPrice}
                     </span>
                   )}
                 </div>
-                <div className="text-text-light">
-                  per {type === 'corporate' ? 'user/' : ''}{billingCycle === 'monthly' ? 'month' : 'year'}
-                  {billingCycle === 'annual' && (
-                    <span className="text-success-default font-medium ml-2">
-                      Save {Math.round(((plan.originalPrice - plan.price) / plan.originalPrice) * 100)}%
-                    </span>
-                  )}
+                <div className="text-left text-sm text-text-medium leading-snug">
+                  <div>
+                    per {type === 'corporate' ? 'user / ' : ''}
+                    {billingCycle === 'monthly' ? 'month' : 'year'}
+                  </div>
+                  <div className="text-text-light">
+                    billed {billingCycle === 'monthly' ? 'monthly' : 'annually'}
+                  </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -357,18 +368,20 @@ export default function Pricing() {
 
         {isEnterprise ? (
           <Link to="/contact" className="block">
-            <Button 
+            <Button
               className="w-full"
-              variant="secondary"
+              variant="outline"
+              size="lg"
             >
               {plan.cta}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </Link>
         ) : (
-          <Button 
-            className={`w-full ${plan.popular ? 'bg-primary-default hover:bg-primary-dark' : ''}`}
-            variant={plan.popular ? 'default' : 'secondary'}
+          <Button
+            className="w-full"
+            variant={plan.popular ? 'primary' : 'outline'}
+            size="lg"
             onClick={handleClick}
             disabled={isLoading || !!loadingPlan || !hasStripePriceId}
             title={
@@ -400,10 +413,46 @@ export default function Pricing() {
 
   const starterPriceState = stripePriceConfigState('starter_monthly')
 
+  const isIndividual = audience === 'individual'
+  const activePlans = isIndividual ? individualPlans : corporatePlans
+  const audienceCopy = isIndividual
+    ? {
+        heading: 'Individual Plans',
+        subheading: 'Perfect for individual learners looking to advance their skills and career.'
+      }
+    : {
+        heading: 'Corporate Plans',
+        subheading: 'Empower your entire organization with comprehensive learning management.'
+      }
+
+  const comparisonColumns = isIndividual
+    ? [
+        { key: 'starter', label: 'Starter' },
+        { key: 'pro', label: 'Pro' },
+        { key: 'premium', label: 'Premium' }
+      ]
+    : [
+        { key: 'team', label: 'Team' },
+        { key: 'business', label: 'Business' },
+        { key: 'enterprise', label: 'Enterprise' }
+      ]
+
+  const comparisonRows = [
+    { feature: 'Course Access', starter: '50+ courses', pro: '1000+ courses', premium: 'All courses', team: 'All courses', business: 'All courses', enterprise: 'All courses' },
+    { feature: 'Progress Tracking', starter: '✓', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
+    { feature: 'Mobile App', starter: '✓', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
+    { feature: 'Offline Downloads', starter: '✗', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
+    { feature: 'Admin Dashboard', starter: '✗', pro: '✗', premium: '✗', team: '✓', business: '✓', enterprise: '✓' },
+    { feature: 'Team Reporting', starter: '✗', pro: '✗', premium: '✗', team: 'Basic', business: 'Advanced', enterprise: 'Custom' },
+    { feature: 'Custom Branding', starter: '✗', pro: '✗', premium: '✗', team: '✗', business: '✓', enterprise: '✓' },
+    { feature: 'API Access', starter: '✗', pro: '✗', premium: '✗', team: '✗', business: '✓', enterprise: '✓' },
+    { feature: 'Support', starter: 'Community', pro: 'Email', premium: 'Priority', team: 'Email', business: 'Priority', enterprise: '24/7 Dedicated' }
+  ]
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-dark to-primary-default text-white py-20">
+      <section className="bg-gradient-to-br from-primary-dark to-primary text-white py-12 sm:py-16 md:py-20">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <PageTitle
             size="hero"
@@ -411,42 +460,51 @@ export default function Pricing() {
             title="Simple, Transparent Pricing"
             titleClassName="!text-white"
             subtitle="Choose the perfect plan for your learning journey. No hidden fees, cancel anytime, and scale as you grow."
-            subtitleWrapperClassName="text-xl text-gray-200 mb-8 max-w-3xl mx-auto"
+            subtitleWrapperClassName="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-3xl mx-auto"
           />
-          
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-white/10 rounded-lg p-1 mb-8">
+
+          {/* Audience Tabs */}
+          <div
+            role="tablist"
+            aria-label="Pricing audience"
+            className="inline-flex items-center bg-white/10 rounded-lg p-1 max-w-full"
+          >
             <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-all ${
-                billingCycle === 'monthly' 
-                  ? 'bg-white text-primary-default shadow-sm' 
+              type="button"
+              role="tab"
+              aria-selected={audience === 'individual'}
+              onClick={() => setAudience('individual')}
+              className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                audience === 'individual'
+                  ? 'bg-white text-primary shadow-sm'
                   : 'text-white hover:text-gray-200'
               }`}
             >
-              Monthly
+              <Star className="w-4 h-4 flex-shrink-0" />
+              Individuals
             </button>
             <button
-              onClick={() => setBillingCycle('annual')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition-all relative ${
-                billingCycle === 'annual' 
-                  ? 'bg-white text-primary-default shadow-sm' 
+              type="button"
+              role="tab"
+              aria-selected={audience === 'corporate'}
+              onClick={() => setAudience('corporate')}
+              className={`flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-md text-sm font-medium transition-all ${
+                audience === 'corporate'
+                  ? 'bg-white text-primary shadow-sm'
                   : 'text-white hover:text-gray-200'
               }`}
             >
-              Annual
-              <span className="absolute -top-2 -right-2 bg-success-default text-white text-xs px-1.5 py-0.5 rounded-full">
-                Save 20%
-              </span>
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+              Companies
             </button>
           </div>
         </div>
       </section>
 
       {(priceConfigSummary.missing.length > 0 || priceConfigSummary.invalid.length > 0) && (
-        <section className="py-6 bg-amber-50 border-y border-amber-200">
+        <section className="py-4 sm:py-6 bg-amber-50 border-y border-amber-200">
           <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Card className="p-5 bg-white border-amber-200">
+            <Card className="p-4 sm:p-5 bg-white border-amber-200">
               <h3 className="text-base font-semibold text-amber-900 mb-2">
                 Billing configuration incomplete
               </h3>
@@ -455,12 +513,12 @@ export default function Pricing() {
                 <code> price_...</code> values and redeploy.
               </p>
               {priceConfigSummary.missing.length > 0 && (
-                <p className="text-sm text-amber-800 mt-2">
+                <p className="text-sm text-amber-800 mt-2 break-words">
                   Missing: {priceConfigSummary.missing.join(', ')}
                 </p>
               )}
               {priceConfigSummary.invalid.length > 0 && (
-                <p className="text-sm text-amber-800 mt-1">
+                <p className="text-sm text-amber-800 mt-1 break-words">
                   Invalid (must start with <code>price_</code>): {priceConfigSummary.invalid.join(', ')}
                 </p>
               )}
@@ -469,84 +527,98 @@ export default function Pricing() {
         </section>
       )}
 
-      {/* Individual Plans */}
-      <section className="py-20 bg-background-light">
+      {/* Plans for active audience */}
+      <section className="py-12 sm:py-16 md:py-20 bg-background-light">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-bold text-text-dark mb-4">Individual Plans</h2>
-            <p className="text-xl text-text-light max-w-2xl mx-auto">
-              Perfect for individual learners looking to advance their skills and career
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold text-text-dark mb-3 sm:mb-4">{audienceCopy.heading}</h2>
+            <p className="text-base sm:text-lg md:text-xl text-text-medium max-w-2xl mx-auto">
+              {audienceCopy.subheading}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {individualPlans.map((plan, index) => (
-              <PlanCard key={index} plan={plan} type="individual" />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Corporate Plans */}
-      <section className="py-20">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-bold text-text-dark mb-4">Corporate Plans</h2>
-            <p className="text-xl text-text-light max-w-2xl mx-auto">
-              Empower your entire organization with comprehensive learning management
+          {/* Billing Cycle Toggle */}
+          <div className="flex flex-col items-center mb-10 sm:mb-12">
+            <div className="inline-flex items-center bg-white border border-background-dark rounded-lg p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-4 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all ${
+                  billingCycle === 'monthly'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-text-medium hover:text-text-dark'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('annual')}
+                className={`px-4 sm:px-6 py-2 rounded-md text-sm font-semibold transition-all ${
+                  billingCycle === 'annual'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-text-medium hover:text-text-dark'
+                }`}
+              >
+                Annual
+              </button>
+            </div>
+            <p className="mt-3 text-sm">
+              <span className="font-semibold text-success-default">Save 20%</span>
+              <span className="text-text-medium"> on a yearly subscription</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {corporatePlans.map((plan, index) => (
-              <PlanCard key={index} plan={plan} type="corporate" />
+          <div
+            role="tabpanel"
+            aria-label={audienceCopy.heading}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-4 md:pt-6"
+          >
+            {activePlans.map((plan, index) => (
+              <PlanCard key={`${audience}-${index}`} plan={plan} type={audience} />
             ))}
           </div>
         </div>
       </section>
 
       {/* Features Comparison */}
-      <section className="py-20 bg-background-light">
+      <section className="py-12 sm:py-16 md:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-bold text-text-dark mb-4">Feature Comparison</h2>
-            <p className="text-xl text-text-light">
-              See what's included in each plan
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-text-dark mb-3 sm:mb-4">Feature Comparison</h2>
+            <p className="text-base sm:text-lg md:text-xl text-text-medium">
+              See what's included in each {isIndividual ? 'individual' : 'corporate'} plan
             </p>
           </div>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden p-0 sm:p-0">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[520px] text-sm sm:text-base">
                 <thead>
                   <tr className="border-b border-background-dark">
-                    <th className="text-left py-4 px-6 font-semibold text-text-dark">Features</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Starter</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Pro</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Premium</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Team</th>
-                    <th className="text-center py-4 px-6 font-semibold text-text-dark">Business</th>
+                    <th className="text-left py-3 sm:py-4 px-3 sm:px-6 font-semibold text-text-dark">Features</th>
+                    {comparisonColumns.map((col) => (
+                      <th
+                        key={col.key}
+                        className="text-center py-3 sm:py-4 px-3 sm:px-6 font-semibold text-text-dark"
+                      >
+                        {col.label}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { feature: "Course Access", starter: "50+ courses", pro: "1000+ courses", premium: "All courses", team: "All courses", business: "All courses" },
-                    { feature: "Progress Tracking", starter: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Mobile App", starter: "✓", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Offline Downloads", starter: "✗", pro: "✓", premium: "✓", team: "✓", business: "✓" },
-                    { feature: "Admin Dashboard", starter: "✗", pro: "✗", premium: "✗", team: "✓", business: "✓" },
-                    { feature: "Team Reporting", starter: "✗", pro: "✗", premium: "✗", team: "Basic", business: "Advanced" },
-                    { feature: "Custom Branding", starter: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
-                    { feature: "API Access", starter: "✗", pro: "✗", premium: "✗", team: "✗", business: "✓" },
-                    { feature: "Support", starter: "Community", pro: "Email", premium: "Priority", team: "Email", business: "Priority" }
-                  ].map((row, index) => (
+                  {comparisonRows.map((row, index) => (
                     <tr key={index} className="border-b border-background-light">
-                      <td className="py-4 px-6 font-medium text-text-dark">{row.feature}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.starter}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.pro}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.premium}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.team}</td>
-                      <td className="py-4 px-6 text-center text-text-medium">{row.business}</td>
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 font-medium text-text-dark whitespace-nowrap">{row.feature}</td>
+                      {comparisonColumns.map((col) => (
+                        <td
+                          key={col.key}
+                          className="py-3 sm:py-4 px-3 sm:px-6 text-center text-text-medium"
+                        >
+                          {row[col.key]}
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -557,13 +629,13 @@ export default function Pricing() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl font-bold text-text-dark mb-4">Frequently Asked Questions</h2>
+      <section className="py-12 sm:py-16 md:py-20 bg-background-light">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-text-dark mb-3 sm:mb-4">Frequently Asked Questions</h2>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6">
             {[
               {
                 question: "Can I change plans anytime?",
@@ -590,9 +662,9 @@ export default function Pricing() {
                 answer: "Yes! For teams of 200+ users, we offer custom pricing with volume discounts. Contact our sales team for details."
               }
             ].map((faq, index) => (
-              <Card key={index} className="p-6">
-                <h3 className="text-lg font-semibold text-text-dark mb-3">{faq.question}</h3>
-                <p className="text-text-light">{faq.answer}</p>
+              <Card key={index} className="p-5 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-text-dark mb-2 sm:mb-3">{faq.question}</h3>
+                <p className="text-sm sm:text-base text-text-medium">{faq.answer}</p>
               </Card>
             ))}
           </div>
@@ -600,16 +672,16 @@ export default function Pricing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary-default text-white">
+      <section className="py-12 sm:py-16 md:py-20 bg-primary text-white">
         <div className="max-w-8xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold mb-6">Ready to Get Started?</h2>
-          <p className="text-xl text-gray-200 mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Ready to Get Started?</h2>
+          <p className="text-base sm:text-lg md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto">
             Join thousands of learners and organizations who trust Leadwise Academy for their development needs.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-white text-primary-default hover:bg-gray-100"
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto bg-white text-primary hover:bg-gray-100"
               onClick={() => handleSubscribe('starter_monthly')}
               disabled={!!loadingPlan || starterPriceState !== 'ok'}
               title={
@@ -631,14 +703,14 @@ export default function Pricing() {
                 'Get Started for $9/mo'
               )}
             </Button>
-            <Link to="/contact">
-              <Button variant="ghost" size="lg" className="text-white border-white hover:bg-white hover:text-primary-default">
+            <Link to="/contact" className="w-full sm:w-auto">
+              <Button variant="ghost" size="lg" className="w-full sm:w-auto text-white border-white hover:bg-white hover:text-primary">
                 Contact Sales
               </Button>
             </Link>
           </div>
-          
-          <div className="mt-8 flex items-center justify-center gap-8 text-sm text-gray-300">
+
+          <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:gap-x-8 text-sm text-gray-300">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
               <span>SOC 2 Compliant</span>
