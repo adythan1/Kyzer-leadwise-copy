@@ -141,18 +141,19 @@ export default function Pricing() {
       name: "Starter",
       price: billingCycle === 'monthly' ? 9 : 90,
       originalPrice: billingCycle === 'annual' ? 108 : null,
-      description: "Perfect for getting started with learning",
+      description: "The essentials to start learning at your own pace.",
       stripePriceKey: billingCycle === 'monthly' ? 'starter_monthly' : 'starter_annual',
       features: [
-        "Access to 50+ courses",
-        "Basic progress tracking",
-        "Community forums",
-        "Mobile app access",
-        "Certificate of completion"
+        "Access to the full course catalog",
+        "Video, PDF and presentation lessons",
+        "Interactive quizzes and knowledge checks",
+        "Lesson progress and time-on-task tracking",
+        "Course completion certificates",
+        "Shareable certificate verification links",
+        "Per-course community discussions"
       ],
       limitations: [
-        "No offline access",
-        "Basic support only"
+        "Email support, next-business-day response"
       ],
       cta: "Get Started",
       popular: false,
@@ -162,17 +163,16 @@ export default function Pricing() {
       name: "Pro",
       price: billingCycle === 'monthly' ? 29 : 290,
       originalPrice: billingCycle === 'annual' ? 348 : null,
-      description: "Unlock your full learning potential",
+      description: "For dedicated learners who want to grow faster.",
       stripePriceKey: billingCycle === 'monthly' ? 'pro_monthly' : 'pro_annual',
       features: [
-        "Unlimited access to 1000+ courses",
-        "Advanced progress analytics",
-        "Offline course downloads",
-        "Priority support",
-        "Personalized learning paths",
-        "Skills assessments",
-        "Project-based learning",
-        "1-on-1 mentoring sessions (2/month)"
+        "Everything in Starter",
+        "Wishlist and personalised dashboard",
+        "Detailed progress analytics",
+        "Course reviews and downloadable resources",
+        "SCORM 1.2 / 2004 packaged training",
+        "Themed certificate templates",
+        "Priority email support"
       ],
       limitations: [],
       cta: "Start Pro Trial",
@@ -183,17 +183,14 @@ export default function Pricing() {
       name: "Premium",
       price: billingCycle === 'monthly' ? 99 : 990,
       originalPrice: billingCycle === 'annual' ? 1188 : null,
-      description: "For serious professionals and experts",
+      description: "For professionals committed to long-term mastery.",
       stripePriceKey: billingCycle === 'monthly' ? 'premium_monthly' : 'premium_annual',
       features: [
         "Everything in Pro",
-        "Expert-led live sessions",
-        "Custom learning tracks",
-        "Industry certifications",
-        "Career coaching sessions",
-        "Networking events",
-        "Beta access to new features",
-        "White-glove onboarding"
+        "Concierge onboarding session",
+        "Priority response support SLA",
+        "Bulk certificate downloads",
+        "Early access to new features and content"
       ],
       limitations: [],
       cta: "Go Premium",
@@ -207,45 +204,44 @@ export default function Pricing() {
       name: "Team",
       price: billingCycle === 'monthly' ? 15 : 150,
       originalPrice: billingCycle === 'annual' ? 180 : null,
-      description: "Perfect for small teams and startups",
-      userRange: "5-50 users",
+      description: "Run training for a small, focused team.",
+      userRange: "Up to 50 users",
       checkoutQuantity: 5,
       stripePriceKey: billingCycle === 'monthly' ? 'team_monthly' : 'team_annual',
       features: [
-        "All Pro features for team members",
-        "Team progress dashboard",
-        "Basic admin controls",
-        "Course assignments",
-        "Team reporting",
-        "Email support",
-        "SSO integration"
+        "Everything in Pro for every team member",
+        "Company dashboard with training metrics",
+        "Employee directory with role management",
+        "Email and CSV bulk invitations",
+        "Department organisation",
+        "Course assignments to the org or individuals",
+        "Progress and completion reports",
+        "Email support"
       ],
       limitations: [
-        "Limited to 50 employees",
-        "Basic reporting only"
+        "Standard roles only — no custom RBAC",
+        "No mandatory-training workflows"
       ],
       cta: "Start Team Trial",
       popular: false,
       icon: Users
     },
     {
-      name: "Business", 
+      name: "Business",
       price: billingCycle === 'monthly' ? 25 : 250,
       originalPrice: billingCycle === 'annual' ? 300 : null,
-      description: "Advanced features for growing companies",
-      userRange: "50-200 users",
+      description: "Scale training across departments and roles.",
+      userRange: "Up to 200 users",
       checkoutQuantity: 50,
       stripePriceKey: billingCycle === 'monthly' ? 'business_monthly' : 'business_annual',
       features: [
         "Everything in Team",
-        "Advanced analytics & reporting",
-        "Custom branding",
-        "Department management",
-        "Mandatory course assignments",
-        "Compliance tracking",
-        "API access",
-        "Priority support",
-        "Custom integrations"
+        "Mandatory assignments with due dates",
+        "Custom roles with granular permissions (RBAC)",
+        "CSV export of users and learning data",
+        "SCORM 1.2 / 2004 packaged training delivery",
+        "Customisable certificate templates",
+        "Priority email support"
       ],
       limitations: [],
       cta: "Start Business Trial",
@@ -255,18 +251,15 @@ export default function Pricing() {
     {
       name: "Enterprise",
       price: "Custom",
-      description: "Tailored solutions for large organizations",
+      description: "Tailored deployment, security and support for large organisations.",
       userRange: "200+ users",
       features: [
         "Everything in Business",
-        "Custom development",
-        "Dedicated account manager",
-        "Advanced security controls",
-        "Custom reporting",
-        "Unlimited integrations",
-        "24/7 phone support",
-        "On-premise deployment option",
-        "SLA guarantee"
+        "Dedicated customer success manager",
+        "Guided onboarding and content migration",
+        "Security review and DPA on request",
+        "Custom integrations by arrangement",
+        "SLA-backed support"
       ],
       limitations: [],
       cta: "Contact Sales",
@@ -437,17 +430,39 @@ export default function Pricing() {
         { key: 'enterprise', label: 'Enterprise' }
       ]
 
-  const comparisonRows = [
-    { feature: 'Course Access', starter: '50+ courses', pro: '1000+ courses', premium: 'All courses', team: 'All courses', business: 'All courses', enterprise: 'All courses' },
-    { feature: 'Progress Tracking', starter: '✓', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
-    { feature: 'Mobile App', starter: '✓', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
-    { feature: 'Offline Downloads', starter: '✗', pro: '✓', premium: '✓', team: '✓', business: '✓', enterprise: '✓' },
-    { feature: 'Admin Dashboard', starter: '✗', pro: '✗', premium: '✗', team: '✓', business: '✓', enterprise: '✓' },
-    { feature: 'Team Reporting', starter: '✗', pro: '✗', premium: '✗', team: 'Basic', business: 'Advanced', enterprise: 'Custom' },
-    { feature: 'Custom Branding', starter: '✗', pro: '✗', premium: '✗', team: '✗', business: '✓', enterprise: '✓' },
-    { feature: 'API Access', starter: '✗', pro: '✗', premium: '✗', team: '✗', business: '✓', enterprise: '✓' },
-    { feature: 'Support', starter: 'Community', pro: 'Email', premium: 'Priority', team: 'Email', business: 'Priority', enterprise: '24/7 Dedicated' }
-  ]
+  const comparisonRows = isIndividual
+    ? [
+        { feature: 'Full course catalog', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Video, PDF and presentation lessons', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Quizzes and knowledge checks', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Course completion certificates', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Shareable certificate verification links', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Course community discussions', starter: '✓', pro: '✓', premium: '✓' },
+        { feature: 'Progress analytics', starter: 'Basic', pro: 'Detailed', premium: 'Detailed' },
+        { feature: 'SCORM 1.2 / 2004 lessons', starter: '✗', pro: '✓', premium: '✓' },
+        { feature: 'Themed certificate templates', starter: '✗', pro: '✓', premium: '✓' },
+        { feature: 'Wishlist and personalised dashboard', starter: '✗', pro: '✓', premium: '✓' },
+        { feature: 'Concierge onboarding', starter: '✗', pro: '✗', premium: '✓' },
+        { feature: 'Bulk certificate downloads', starter: '✗', pro: '✗', premium: '✓' },
+        { feature: 'Support', starter: 'Email (NBD)', pro: 'Priority email', premium: 'Priority + SLA' }
+      ]
+    : [
+        { feature: 'Company dashboard', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Employee directory and roles', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Email and CSV bulk invitations', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Departments', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Course assignments', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Progress and completion reports', team: '✓', business: '✓', enterprise: '✓' },
+        { feature: 'Mandatory assignments with due dates', team: '✗', business: '✓', enterprise: '✓' },
+        { feature: 'Custom roles with granular permissions', team: '✗', business: '✓', enterprise: '✓' },
+        { feature: 'CSV export of users and learning data', team: '✗', business: '✓', enterprise: '✓' },
+        { feature: 'SCORM 1.2 / 2004 training delivery', team: '✗', business: '✓', enterprise: '✓' },
+        { feature: 'Customisable certificate templates', team: '✗', business: '✓', enterprise: '✓' },
+        { feature: 'Dedicated customer success manager', team: '✗', business: '✗', enterprise: '✓' },
+        { feature: 'Guided onboarding and content migration', team: '✗', business: '✗', enterprise: '✓' },
+        { feature: 'Custom integrations', team: '✗', business: '✗', enterprise: 'On request' },
+        { feature: 'Support', team: 'Email', business: 'Priority email', enterprise: 'SLA-backed' }
+      ]
 
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -666,7 +681,7 @@ export default function Pricing() {
               },
               {
                 question: "Do you offer a free trial?",
-                answer: "All paid plans come with a 14-day free trial. Your card will not be charged until the trial period ends."
+                answer: "Yes — every account starts on our free tier with access to a curated set of free-trial courses, so you can explore the platform before subscribing. Upgrade any time from your account settings to unlock the full catalog."
               },
               {
                 question: "What payment methods do you accept?",
@@ -736,15 +751,15 @@ export default function Pricing() {
           <div className="mt-6 sm:mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 sm:gap-x-8 text-sm text-gray-300">
             <div className="flex items-center gap-2">
               <Shield className="w-4 h-4" />
-              <span>SOC 2 Compliant</span>
+              <span>Secure Stripe checkout</span>
             </div>
             <div className="flex items-center gap-2">
               <HeadphonesIcon className="w-4 h-4" />
-              <span>24/7 Support</span>
+              <span>Friendly human support</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4" />
-              <span>99.9% Uptime</span>
+              <span>Cancel anytime</span>
             </div>
           </div>
         </div>
