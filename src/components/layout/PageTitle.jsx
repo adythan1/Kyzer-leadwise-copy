@@ -18,7 +18,7 @@ const SIZES = {
     subtitle: 'pt-1 text-sm text-text-light sm:text-base md:text-lg',
   },
   hero: {
-    title: 'text-4xl md:text-6xl font-bold text-text-dark pb-4 md:pb-6 leading-tight',
+    title: 'text-3xl sm:text-4xl md:text-6xl font-bold text-text-dark pb-4 md:pb-6 leading-tight max-w-full break-words',
     accent: 'h-1 md:h-1.5 w-20 md:w-28 rounded-full',
     subtitle: 'pt-2 text-lg text-text-medium md:text-xl max-w-3xl mx-auto',
   },
@@ -62,7 +62,7 @@ export default function PageTitle({
     align === 'center' ? 'text-center flex flex-col items-center' : '';
   const rowAlign =
     align === 'center'
-      ? 'flex flex-col items-center gap-3 sm:flex-row sm:justify-center'
+      ? 'flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center'
       : 'flex items-center gap-3';
 
   return (
