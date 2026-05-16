@@ -19,6 +19,24 @@ export const getStripe = () => {
   return stripePromise
 }
 
+// Stripe's "No such price" error means the configured Price ID does not exist
+// for the secret key currently bound to the Edge Function. In practice this is
+// almost always a test/live mode mismatch between VITE_STRIPE_PRICE_* (built into
+// the client bundle) and STRIPE_SECRET_KEY (stored in Supabase secrets).
+const decorateStripeMessage = (message, context = {}) => {
+  if (!message) return message
+  if (/no such price/i.test(message)) {
+    const modeNote = context.secretKeyMode
+      ? ` Supabase secret is in ${context.secretKeyMode.toUpperCase()} mode`
+      : ''
+    const priceNote = context.attemptedPriceId
+      ? `, attempted priceId="${context.attemptedPriceId}"`
+      : ''
+    return `${message} — this Price ID is not visible to the configured Stripe secret key.${modeNote}${priceNote}. Most likely cause: test vs live mode mismatch (or wrong Stripe account) between VITE_STRIPE_PRICE_* (frontend env) and STRIPE_SECRET_KEY (Supabase Edge Function secrets). Both must be in the same mode and from the same Stripe account.`
+  }
+  return message
+}
+
 // Translate a supabase.functions.invoke() error into a user-friendly Error.
 // Distinguishes a true "function unreachable" failure from a function that
 // ran but returned a non-2xx response, so we surface the actual server message
@@ -40,21 +58,26 @@ const parseInvokeError = async (error, unreachableMessage) => {
           (typeof body?.message === 'string' && body.message) ||
           ''
         if (serverMessage) {
-          return new Error(serverMessage)
+          return new Error(
+            decorateStripeMessage(serverMessage, {
+              secretKeyMode: body?.secretKeyMode,
+              attemptedPriceId: body?.attemptedPriceId,
+            })
+          )
         }
       } catch {
         try {
           const text = await response.clone().text()
-          if (text) return new Error(text)
+          if (text) return new Error(decorateStripeMessage(text))
         } catch {
           // fall through to default
         }
       }
     }
-    return new Error(error.message || 'Edge Function returned an error')
+    return new Error(decorateStripeMessage(error.message) || 'Edge Function returned an error')
   }
 
-  return new Error(error?.message || 'Unknown error invoking Edge Function')
+  return new Error(decorateStripeMessage(error?.message) || 'Unknown error invoking Edge Function')
 }
 
 /**
