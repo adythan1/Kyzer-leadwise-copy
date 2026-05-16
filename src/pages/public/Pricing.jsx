@@ -110,7 +110,7 @@ export default function Pricing() {
     const envName = stripePriceEnvVarName(stripePriceKey)
     if (!priceId || !String(priceId).trim()) {
       toast.error(
-        `Add ${envName}=price_... in Vercel (project) env and redeploy. Team/Business use TEAM_MONTHLY / BUSINESS_MONTHLY, not STARTER_* only.`
+        `Add ${envName}=price_... to the production environment and rebuild. Team/Business require TEAM_MONTHLY / BUSINESS_MONTHLY, not STARTER_* only.`
       )
       return
     }

@@ -15,13 +15,13 @@ Use the **Price** id from Stripe (**`price_...`**), under the product’s **Pric
 
 If a variable is missing or wrong, the UI shows **Billing not configured** or **Invalid Price ID**.
 
-**Vercel:** Add variables on the **project** that builds this app (or team-shared vars that apply to that project), then **redeploy** — Vite bakes `VITE_*` in at build time.
+**Production hosting (Digital Ocean / any host):** Add `VITE_*` variables to the **build environment** of the app, then **redeploy** — Vite bakes `VITE_*` in at build time. Changing them at runtime has no effect; you must rebuild.
 
 After editing `.env` locally, restart Vite (`npm run dev`). Use **test** Price IDs with a **test** publishable key.
 
-### Vercel warning about `VITE_*` and `KEY`
+### Warning about `VITE_*` and `KEY`
 
-Any `VITE_` variable is included in the **client** bundle. Vercel may warn if the name contains `KEY`. That is appropriate for **secrets**; Stripe’s **publishable** key (`pk_...`) is **meant to be public** (restrict abuse in Stripe Dashboard with allowed domains if needed). Never add `STRIPE_SECRET_KEY` / `sk_...` as a `VITE_` variable.
+Any `VITE_` variable is included in the **client** bundle. Some hosts may warn if the name contains `KEY`. That is appropriate for **secrets**; Stripe's **publishable** key (`pk_...`) is **meant to be public** (restrict abuse in Stripe Dashboard with allowed domains if needed). Never add `STRIPE_SECRET_KEY` / `sk_...` as a `VITE_` variable.
 
 To reduce the warning, use **`VITE_STRIPE_PUBLISHABLE`** (supported in code) instead of `VITE_STRIPE_PUBLISHABLE_KEY`.
 
